@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asia Crazy Team 封神戰隊 - DOM與動態成交視覺模擬器</title>
+    <style>
+        /* 1. 建立本地字體對應，優先讀取本地同目錄下的 ttf 檔案，或你已經安裝在系統中的粉圓體 */
+        @font-face {
+            font-family: 'jf-openhuninn-2.1';
+            src: local('jf-openhuninn-2.1'),
+                 local('jf openhuninn 2.1'),
+                 local('jf-open-hunyuan'),
+                 url('jf-openhuninn-2.1.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* 2. 強制全網頁所有文字與輸入框、按鈕無條件套用 */
+        * {
+            font-family: 'jf-openhuninn-2.1', 'PingFang TC', 'Microsoft JhengHei', sans-serif !important;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Asia Crazy Team 封神戰隊 抬頭樣式 */
+        .team-title {
+            font-size: 38px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, #1e3a8a, #6d28d9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .team-subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            color: #64748b;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .disclaimer {
+            background-color: #000;
+            color: #fff;
+            padding: 5px 15px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .control-panel {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.1s;
+        }
+        .btn:active {
+            opacity: 0.7;
+        }
+        .btn-buy { background-color: #28a745; }
+        .btn-sell { background-color: #dc3545; }
+        .btn-random { background-color: #6c757d; } 
+        .btn-random:hover { background-color: #5a6268; }
+        
+        .btn-toggle-on { background-color: #17a2b8; } 
+        .btn-toggle-off { background-color: #e83e8c; } 
+        
+        .btn-auto-off { background-color: #fd7e14; } 
+        .btn-auto-on { background-color: #6f42c1; animation: pulse 1.5s infinite; } 
+        
+        .btn-mute-off { background-color: #28a745; }
+        .btn-mute-on { background-color: #6c757d; }
+
+        .select-speed {
+            padding: 7px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .input-qty {
+            width: 60px;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .hotkey-tip {
+            font-size: 11px;
+            color: #666;
+            display: block;
+            margin-top: 2px;
+            font-weight: normal;
+        }
+        
+        .main-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #kline-canvas {
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        table {
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: center;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            width: 80px;
+        }
+        th {
+            background-color: #f1f3f5;
+            font-weight: bold;
+        }
+        
+        .cell-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            outline: none;
+            color: white !important; 
+        }
+        
+        .bg-ask-zone { background-color: #fff0f1; } 
+        .bg-bid-zone { background-color: #e6f7ff; } 
+        
+        .col-limit-buy { background-color: #001594; padding: 4px !important; } 
+        .col-limit-sell { background-color: #8c0000; padding: 4px !important; } 
+        
+        .pnl-loss { color: #dc3545; font-weight: bold; }
+        .pnl-profit { color: #28a745; font-weight: bold; }
+        
+        .delta-positive { color: #28a745; font-weight: bold; background-color: #e6f4ea; }
+        .delta-negative { color: #dc3545; font-weight: bold; background-color: #fce8e6; }
+        
+        .col-volume {
+            position: relative;
+            font-weight: bold;
+            color: #333;
+            text-align: left;
+            padding: 6px 8px !important;
+        }
+        
+        .volume-bar-wrapper {
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            border: 1px solid #cbd5e1; 
+            border-radius: 3px;
+            padding-left: 6px;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            transition: background 0.15s ease;
+        }
+        
+        .current-price {
+            background-color: #fff3cd !important;
+            font-weight: bold;
+        }
+
+        .current-price-box {
+            display: inline-block;
+            border: 2px solid #ff0000; 
+            padding: 2px 8px;
+            border-radius: 3px;
+            background-color: #ffffff;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="team-title">Asia Crazy Team 封神戰隊</div>
+    <div class="team-subtitle">DOM與動態成交視覺模擬器</div>
+
+    <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
+
+    <div class="control-panel">
+        <label>
+            <input type="checkbox" id="slip-control" checked> 無滑點控制
+        </label>
+        
+        <button class="btn btn-random" onclick="randomizeLimitOrders()">🎲 隨機配置限價單 (全面重置)</button>
+        <button id="btn-toggle-autofill" class="btn btn-toggle-on" onclick="toggleAutoFill()">🤖 造市商補單：開啟中</button>
+        
+        <button id="btn-toggle-mute" class="btn btn-mute-off" onclick="toggleMute()">🔊 音效：開啟</button>
+        
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <button id="btn-toggle-auto" class="btn btn-auto-off" onclick="toggleAutoTrading()">⚡ 自動撮合：關閉中</button>
+            <select id="select-speed" class="select-speed" onchange="handleSpeedChange()">
+                <option value="500">0.5x 慢速</option>
+                <option value="250" selected>1x 正常</option>
+                <option value="50">2x 快速</option>
+                <option value="10">5x 極速</option>
+            </select>
+        </div>
+        
+        <div>
+            <button id="btn-buy-panel" class="btn btn-buy" onclick="handleMarketOrder('BUY', null)">市價買入</button>
+            <span class="hotkey-tip">快捷鍵: B</span>
+        </div>
+        <input type="number" id="buy-qty" class="input-qty" value="5" min="1">
+        
+        <div>
+            <button id="btn-sell-panel" class="btn btn-sell" onclick="handleMarketOrder('SELL', null)">市價賣出</button>
+            <span class="hotkey-tip">快捷鍵: S</span>
+        </div>
+        <input type="number" id="sell-qty" class="input-qty" value="5" min="1">
+    </div>
+
+    <div class="main-container">
+        <canvas id="kline-canvas" width="180" height="420"></canvas>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>PnL/Tick</th>
+                    <th>限價多</th>
+                    <th>市價空</th>
+                    <th>Price</th>
+                    <th>市價多</th>
+                    <th>限價空</th>
+                    <th>Delta</th>
+                    <th>Volume</th>
+                </tr>
+            </thead>
+            <tbody id="dom-body">
+                </tbody>
+        </table>
+    </div>
+
+<script>
+    let currentPriceIndex = 7; 
+    let marketData = [];
+    let isAutoFillEnabled = true; 
+    let isAutoTradingEnabled = false; 
+    let isMuted = false;              
+    let autoTradingTimer = null;      
+
+    let targetKLine = { open: 0, high: 0, low: 0, close: 0 };
+    let currentKLine = { open: 0, high: 0, low: 0, close: 0 };
+
+    // 瀏覽器底層 Canvas 專用粉圓體綁定
+    function getHunYuanFont() {
+        return '12px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
+    }
+
+    function resetMarketData() {
+        marketData = [];
+        let basePrice = 2980.6;
+        for (let i = 0; i < 15; i++) {
+            marketData.push({
+                price: basePrice - (i * 0.1),
+                limitBuy: 0,
+                limitSell: 0,
+                marketSell: 0, 
+                marketBuy: 0,  
+                delta: 0,      
+                volume: 0      
+            });
+        }
+    }
+
+    let globalAudioCtx = null;
+
+    function initAudio() {
+        if (!globalAudioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            globalAudioCtx = new AudioContext();
+        }
+        if (globalAudioCtx.state === 'suspended') {
+            globalAudioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        if (isMuted) return; 
+        initAudio();
+        if (!globalAudioCtx) return;
+
+        try {
+            const masterGain = globalAudioCtx.createGain();
+            masterGain.connect(globalAudioCtx.destination);
+
+            if (type === 'BUY') {
+                const frequencies = [1050, 1480, 2200];
+                frequencies.forEach((freq, index) => {
+                    const osc = globalAudioCtx.createOscillator();
+                    const oscGain = globalAudioCtx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, globalAudioCtx.currentTime);
+                    
+                    oscGain.gain.setValueAtTime(index === 0 ? 0.25 : 0.12, globalAudioCtx.currentTime);
+                    oscGain.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 1.2);
+                    
+                    osc.connect(oscGain);
+                    oscGain.connect(masterGain);
+                    
+                    osc.start();
+                    osc.stop(globalAudioCtx.currentTime + 1.3);
+                });
+            } else if (type === 'SELL') {
+                const osc = globalAudioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(280, globalAudioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(140, globalAudioCtx.currentTime + 0.08);
+
+                masterGain.gain.setValueAtTime(0.4, globalAudioCtx.currentTime);
+                masterGain.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 0.12);
+
+                osc.connect(masterGain);
+                osc.start();
+                osc.stop(globalAudioCtx.currentTime + 0.15);
+            }
+        } catch (e) {
+            console.log("音訊連續播放受限:", e);
+        }
+    }
+
+    function animateKLine() {
+        currentKLine.open  += (targetKLine.open  - currentKLine.open)  * 0.18;
+        currentKLine.close += (targetKLine.close - currentKLine.close) * 0.18;
+        currentKLine.high  += (targetKLine.high  - currentKLine.high)  * 0.18;
+        currentKLine.low   += (targetKLine.low   - currentKLine.low)   * 0.18;
+
+        drawKLineCanvas(currentKLine);
+        requestAnimationFrame(animateKLine);
+    }
+
+    function drawKLineCanvas(candle) {
+        const canvas = document.getElementById('kline-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = '#2d2d2d';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 15; i++) {
+            let y = 35 + (i * 25.3); 
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        function getXyByPrice(price) {
+            let percentage = (2980.6 - price) / (2980.6 - 2979.2);
+            return 35 + percentage * (390 - 35);
+        }
+
+        let yOpen = getXyByPrice(candle.open);
+        let yClose = getXyByPrice(candle.close);
+        let yHigh = getXyByPrice(candle.high);
+        let yLow = getXyByPrice(candle.low);
+
+        let isBullish = candle.close >= candle.open;
+        let themeColor = isBullish ? '#28a745' : '#dc3545';
+
+        let centerX = canvas.width / 2;
+
+        ctx.strokeStyle = themeColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, yHigh);
+        ctx.lineTo(centerX, yLow);
+        ctx.stroke();
+
+        ctx.fillStyle = themeColor;
+        let boxWidth = 40;
+        let boxHeight = yClose - yOpen;
+        
+        if (Math.abs(boxHeight) < 2) {
+            boxHeight = isBullish ? -2 : 2;
+        }
+        ctx.fillRect(centerX - boxWidth / 2, yOpen, boxWidth, boxHeight);
+
+        let yCurrent = getXyByPrice(candle.close);
+        ctx.strokeStyle = '#fff3cd';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, yCurrent);
+        ctx.lineTo(canvas.width, yCurrent);
+        ctx.stroke();
+        ctx.setLineDash([]); 
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = getHunYuanFont(); 
+        ctx.fillText(`現價: ${marketData[currentPriceIndex].price.toFixed(1)}`, 15, canvas.height - 15);
+    }
+
+    function randomizeLimitOrders() {
+        currentPriceIndex = 7;
+        resetMarketData(); 
+
+        marketData.forEach((row, index) => {
+            if (index < currentPriceIndex) {
+                row.limitSell = Math.floor(Math.random() * 31);
+            } else if (index > currentPriceIndex) {
+                row.limitBuy = Math.floor(Math.random() * 31);
+            }
+        });
+
+        let initPrice = marketData[currentPriceIndex].price;
+        targetKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
+        currentKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
+
+        if (isAutoFillEnabled) {
+            autoFillMarketDepth();
+        }
+        renderDOM();
+    }
+
+    function toggleAutoFill() {
+        const btn = document.getElementById('btn-toggle-autofill');
+        isAutoFillEnabled = !isAutoFillEnabled;
+        
+        if (isAutoFillEnabled) {
+            btn.className = "btn btn-toggle-on";
+            btn.innerText = "🤖 造市商補單：開啟中";
+            autoFillMarketDepth(); 
+        } else {
+            btn.className = "btn btn-toggle-off";
+            btn.innerText = "🔒 獨立沙盒：已關閉補單";
+        }
+        renderDOM();
+    }
+
+    function toggleMute() {
+        const btn = document.getElementById('btn-toggle-mute');
+        isMuted = !isMuted;
+        if (isMuted) {
+            btn.className = "btn btn-toggle-off";
+            btn.innerText = "🔇 音效：已靜音";
+        } else {
+            btn.className = "btn btn-mute-off";
+            btn.innerText = "🔊 音效：開啟";
+        }
+    }
+
+    function handleSpeedChange() {
+        if (isAutoTradingEnabled) {
+            clearInterval(autoTradingTimer);
+            startAutoInterval();
+        }
+    }
+
+    function startAutoInterval() {
+        let speed = parseInt(document.getElementById('select-speed').value);
+        autoTradingTimer = setInterval(() => {
+            let side = Math.random() > 0.5 ? 'BUY' : 'SELL';
+            let randomQty = Math.floor(Math.random() * 4) + 2; 
+            handleMarketOrder(side, randomQty);
+        }, speed);
+    }
+
+    function toggleAutoTrading() {
+        initAudio(); 
+        const btn = document.getElementById('btn-toggle-auto');
+        isAutoTradingEnabled = !isAutoTradingEnabled;
+
+        if (isAutoTradingEnabled) {
+            btn.className = "btn btn-auto-on";
+            btn.innerText = "⚡ 自動撮合：模擬中";
+            startAutoInterval();
+        } else {
+            btn.className = "btn btn-auto-off";
+            btn.innerText = "⚡ 自動撮合：關閉中";
+            clearInterval(autoTradingTimer);
+        }
+    }
+
+    function autoFillMarketDepth() {
+        marketData.forEach((row, index) => {
+            if (index < currentPriceIndex) {
+                if (row.limitSell === 0 && row.limitBuy === 0) {
+                    row.limitSell = Math.floor(Math.random() * 15) + 1;
+                }
+                row.limitBuy = 0; 
+            } else if (index > currentPriceIndex) {
+                if (row.limitBuy === 0 && row.limitSell === 0) {
+                    row.limitBuy = Math.floor(Math.random() * 15) + 1;
+                }
+                row.limitSell = 0; 
+            } else {
+                row.limitBuy = 0;
+                row.limitSell = 0;
+            }
+        });
+    }
+
+    window.addEventListener('click', initAudio);
+
+    window.addEventListener('keydown', function(event) {
+        if (event.target.tagName === 'INPUT') return;
+
+        const key = event.key.toLowerCase();
+        if (key === 'b') {
+            event.preventDefault();
+            handleMarketOrder('BUY', null);
+            const btn = document.getElementById('btn-buy-panel');
+            btn.style.opacity = '0.5';
+            setTimeout(() => btn.style.opacity = '1', 100);
+        } else if (key === 's') {
+            event.preventDefault();
+            handleMarketOrder('SELL', null);
+            const btn = document.getElementById('btn-sell-panel');
+            btn.style.opacity = '0.5';
+            setTimeout(() => btn.style.opacity = '1', 100);
+        }
+    });
+
+    function updateLimitValue(index, field, value) {
+        marketData[index][field] = parseInt(value) || 0;
+    }
+
+    function renderDOM() {
+        const tbody = document.getElementById('dom-body');
+        tbody.innerHTML = '';
+
+        let maxVolume = Math.max(...marketData.map(r => r.volume), 1);
+        let maxLimitParam = 30;
+
+        marketData.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            
+            let pnlText = '';
+            let pnlClass = '';
+            let rowBgClass = '';
+            let isCurrentPriceRow = (index === currentPriceIndex);
+
+            if (index < currentPriceIndex) {
+                let ticks = currentPriceIndex - index;
+                pnlText = `-${ticks * 10}`;
+                pnlClass = 'pnl-loss';
+                rowBgClass = 'bg-ask-zone';
+            } else if (index > currentPriceIndex) {
+                let ticks = index - currentPriceIndex;
+                pnlText = `+${ticks * 10}`;
+                pnlClass = 'pnl-profit';
+                rowBgClass = 'bg-bid-zone';
+            } else {
+                pnlText = '+10';
+                pnlClass = 'pnl-profit';
+                rowBgClass = 'current-price';
+            }
+
+            tr.className = rowBgClass;
+
+            let deltaClass = '';
+            if (row.delta > 0) deltaClass = 'delta-positive';
+            else if (row.delta < 0) deltaClass = 'delta-negative';
+
+            if (!isAutoFillEnabled) {
+                if (index < currentPriceIndex) row.limitBuy = 0;
+                if (index > currentPriceIndex) row.limitSell = 0;
+                if (index === currentPriceIndex) { row.limitBuy = 0; row.limitSell = 0; }
+            }
+
+            let buyLimitPercentage = (row.limitBuy / maxLimitParam) * 100;
+            let buyLimitStyle = row.limitBuy > 0 
+                ? `background: linear-gradient(to left, rgba(0, 21, 148, 0.55) ${buyLimitPercentage}%, #001594 ${buyLimitPercentage}%);` 
+                : 'background-color: #001594;';
+
+            let sellLimitPercentage = (row.limitSell / maxLimitParam) * 100;
+            let sellLimitStyle = row.limitSell > 0 
+                ? `background: linear-gradient(to right, rgba(140, 0, 0, 0.55) ${sellLimitPercentage}%, #8c0000 ${sellLimitPercentage}%);` 
+                : 'background-color: #8c0000;';
+
+            let volPercentage = (row.volume / maxVolume) * 100;
+            let isVolumeLeader = (row.volume > 0 && row.volume === maxVolume);
+            let barColor = isVolumeLeader ? '#fca5a5' : '#e2e8f0';
+
+            let volStyle = row.volume > 0 
+                ? `background: linear-gradient(to right, ${barColor} ${volPercentage}%, transparent ${volPercentage}%);` 
+                : '';
+
+            let priceDisplay = isCurrentPriceRow 
+                ? `<span class="current-price-box">${row.price.toFixed(1)}</span>` 
+                : row.price.toFixed(1);
+
+            tr.innerHTML = `
+                <td class="${pnlClass}">${pnlText}</td>
+                <td class="col-limit-buy" style="${buyLimitStyle}">
+                    <input type="number" class="cell-input" value="${row.limitBuy || ''}" min="0" onchange="updateLimitValue(${index}, 'limitBuy', this.value)">
+                </td>
+                <td>${row.marketSell || ''}</td>
+                <td>${priceDisplay}</td>
+                <td>${row.marketBuy || ''}</td>
+                <td class="col-limit-sell" style="${sellLimitStyle}">
+                    <input type="number" class="cell-input" value="${row.limitSell || ''}" min="0" onchange="updateLimitValue(${index}, 'limitSell', this.value)">
+                </td>
+                <td class="${deltaClass}">${row.delta || ''}</td>
+                <td class="col-volume">
+                    <div class="volume-bar-wrapper" style="${volStyle}">
+                        ${row.volume || ''}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function handleMarketOrder(type, customQty = null) {
+        playSound(type);
+
+        let qty = customQty !== null 
+            ? customQty 
+            : parseInt(document.getElementById(type === 'BUY' ? 'buy-qty' : 'sell-qty').value) || 0;
+            
+        if (qty <= 0) return;
+
+        if (type === 'BUY') {
+            for (let i = currentPriceIndex - 1; i >= 0; i--) {
+                if (marketData[i].limitSell > 0) {
+                    let filled = Math.min(qty, marketData[i].limitSell);
+                    marketData[i].marketBuy += filled;
+                    marketData[i].delta = marketData[i].marketBuy - marketData[i].marketSell;
+                    marketData[i].volume = marketData[i].marketBuy + marketData[i].marketSell;
+
+                    if (qty >= marketData[i].limitSell) {
+                        qty -= marketData[i].limitSell;
+                        marketData[i].limitSell = 0;
+                        currentPriceIndex = i; 
+                        if (qty === 0) break;
+                    } else {
+                        marketData[i].limitSell -= qty;
+                        qty = 0;
+                        currentPriceIndex = i + 1; 
+                        break;
+                    }
+                }
+            }
+        } else if (type === 'SELL') {
+            for (let i = currentPriceIndex; i < marketData.length; i++) {
+                if (marketData[i].limitBuy > 0) {
+                    let filled = Math.min(qty, marketData[i].limitBuy);
+                    marketData[i].marketSell += filled;
+                    marketData[i].delta = marketData[i].marketBuy - marketData[i].marketSell;
+                    marketData[i].volume = marketData[i].marketBuy + marketData[i].marketSell;
+
+                    if (qty >= marketData[i].limitBuy) {
+                        qty -= marketData[i].limitBuy;
+                        marketData[i].limitBuy = 0;
+                        currentPriceIndex = i;
+                        if (qty === 0) break;
+                    } else {
+                        marketData[i].limitBuy -= qty;
+                        qty = 0;
+                        currentPriceIndex = i - 1; 
+                        break;
+                    }
+                }
+            }
+            if (currentPriceIndex >= marketData.length) currentPriceIndex = marketData.length - 1;
+            if (currentPriceIndex < 0) currentPriceIndex = 0;
+        }
+
+        let newPrice = marketData[currentPriceIndex].price;
+        targetKLine.close = newPrice; 
+        if (newPrice > targetKLine.high) targetKLine.high = newPrice; 
+        if (newPrice < targetKLine.low) targetKLine.low = newPrice;   
+
+        if (isAutoFillEnabled) {
+            autoFillMarketDepth();
+        }
+        renderDOM(); 
+    }
+
+    // 4. 【強制渲染修正】頁面載入時透過 JS API 直接向瀏覽器註冊該系統字體，確保 100% 成功。
+    document.addEventListener("DOMContentLoaded", function() {
+        if (document.fonts) {
+            document.fonts.load('12px "jf-openhuninn-2.1"').then(() => {
+                renderDOM();
+            });
+        }
+    });
+
+    randomizeLimitOrders();
+    animateKLine(); 
+</script>
+</body>
+</html>
