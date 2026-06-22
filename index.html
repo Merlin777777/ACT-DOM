@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asia Crazy Team 封神戰隊 - DOM與動態成交視覺模擬器</title>
+    <title>Asia Crazy Team 封神戰隊 - K線與熱圖分離版模擬器</title>
     <style>
-        /* 1. 建立本地字體對應 */
+        /* 本地字體對應 */
         @font-face {
             font-family: 'jf-openhuninn-2.1';
             src: local('jf-openhuninn-2.1'),
@@ -16,31 +16,31 @@
             font-style: normal;
         }
 
-        /* 2. 強制全網頁套用粉圓體 */
+        /* 強制全網頁套用粉圓體 */
         * {
             font-family: 'jf-openhuninn-2.1', 'PingFang TC', 'Microsoft JhengHei', sans-serif !important;
             box-sizing: border-box;
         }
 
         body {
-            background-color: #f8f9fa;
-            padding: 10px; /* 手機版邊距縮小 */
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             margin: 0;
         }
 
-        /* Asia Crazy Team 封神戰隊 抬頭樣式 */
         .team-title {
-            font-size: clamp(24px, 5vw, 38px); /* RWD：字體隨螢幕自動縮放 */
+            font-size: clamp(24px, 5vw, 38px);
             font-weight: 700;
-            color: #1e293b;
+            color: #ffffff;
             margin-bottom: 5px;
             text-align: center;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            text-shadow: 0 0 10px rgba(109, 40, 217, 0.8);
             letter-spacing: 2px;
-            background: linear-gradient(45deg, #1e3a8a, #6d28d9);
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -48,39 +48,39 @@
         .team-subtitle {
             font-size: clamp(12px, 3vw, 16px);
             font-weight: bold;
-            color: #64748b;
+            color: #94a3b8;
             margin-bottom: 15px;
             letter-spacing: 1px;
             text-align: center;
         }
 
         .disclaimer {
-            background-color: #000;
-            color: #fff;
+            background-color: #333;
+            color: #f87171;
             padding: 5px 15px;
             font-size: 12px;
             margin-bottom: 15px;
             border-radius: 4px;
             text-align: center;
+            border: 1px solid #444;
         }
 
-        /* 控制面板 RWD */
         .control-panel {
             display: flex;
             gap: 10px;
             align-items: center;
-            background: #fff;
+            background: #1e1e1e;
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
             margin-bottom: 15px;
             flex-wrap: wrap;
             justify-content: center;
             width: 100%;
-            max-width: 800px;
+            max-width: 850px;
+            border: 1px solid #333;
         }
         
-        /* 控制面板內部群組 */
         .control-group {
             display: flex;
             align-items: center;
@@ -96,25 +96,28 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: opacity 0.1s;
+            transition: all 0.1s;
             font-size: 13px;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
         }
-        .btn:active { opacity: 0.7; }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
         
         .btn-buy { background-color: #28a745; }
         .btn-sell { background-color: #dc3545; }
-        .btn-random { background-color: #6c757d; } 
-        .btn-toggle-on { background-color: #17a2b8; } 
-        .btn-toggle-off { background-color: #e83e8c; } 
-        .btn-auto-off { background-color: #fd7e14; } 
-        .btn-auto-on { background-color: #6f42c1; animation: pulse 1.5s infinite; } 
-        .btn-mute-off { background-color: #28a745; }
-        .btn-mute-on { background-color: #6c757d; }
+        .btn-random { background-color: #475569; } 
+        .btn-toggle-on { background-color: #0284c7; } 
+        .btn-toggle-off { background-color: #be185d; } 
+        .btn-auto-off { background-color: #ea580c; } 
+        .btn-auto-on { background-color: #7c3aed; animation: pulse 1.5s infinite; } 
+        .btn-mute-off { background-color: #059669; }
+        .btn-mute-on { background-color: #4b5563; }
 
         .select-speed {
             padding: 7px 5px;
             border-radius: 4px;
-            border: 1px solid #ccc;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
             font-weight: bold;
             outline: none;
             cursor: pointer;
@@ -122,21 +125,22 @@
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
+            0% { opacity: 1; box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.7); }
+            70% { opacity: 0.8; box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+            100% { opacity: 1; box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
         }
 
         .input-qty {
             width: 50px;
             padding: 6px;
             text-align: center;
-            border: 1px solid #ccc;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
             border-radius: 4px;
             font-size: 14px;
         }
 
-        /* 隱藏手機版數字輸入框的上下箭頭 */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -145,37 +149,50 @@
 
         .hotkey-tip {
             font-size: 10px;
-            color: #666;
+            color: #9ca3af;
             display: block;
             margin-top: 2px;
             font-weight: normal;
             text-align: center;
         }
         
-        /* 【新增】手機版橫向滑動外掛容器 */
         .responsive-wrapper {
             width: 100%;
-            max-width: 900px;
-            overflow-x: auto; /* 允許手機左右滑動 */
-            -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 1100px; 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border-radius: 8px;
-            background: white;
+            background: #1a1a1a;
+            border: 1px solid #333;
         }
 
         .main-container {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: flex-start;
             padding: 15px;
-            min-width: 750px; /* 確保內容不會被過度擠壓，留給使用者滑動的空間 */
+            min-width: 900px; 
         }
 
-        #kline-canvas {
-            background-color: #1e1e1e;
+        canvas {
+            background-color: #000000;
             border-radius: 4px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
             flex-shrink: 0;
+            border: 1px solid #333;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .canvas-label {
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: center;
+            font-weight: bold;
         }
 
         table {
@@ -183,16 +200,19 @@
             font-size: 13px;
             text-align: center;
             flex-grow: 1;
+            color: #e2e8f0;
+            margin-top: 21px; 
         }
         th, td {
-            padding: 6px 4px; /* 縮小手機版 padding */
-            border: 1px solid #e0e0e0;
+            padding: 6px 4px; 
+            border: 1px solid #3f3f46;
             min-width: 50px;
         }
         th {
-            background-color: #f1f3f5;
+            background-color: #27272a;
             font-weight: bold;
             white-space: nowrap;
+            color: #a1a1aa;
         }
         
         .cell-input {
@@ -206,22 +226,19 @@
             color: white !important; 
         }
         
-        .bg-ask-zone { background-color: #fff0f1; } 
-        .bg-bid-zone { background-color: #e6f7ff; } 
+        .bg-ask-zone { background-color: rgba(220, 53, 69, 0.08); } 
+        .bg-bid-zone { background-color: rgba(0, 123, 255, 0.08); } 
         
-        .col-limit-buy { background-color: #001594; padding: 2px !important; } 
-        .col-limit-sell { background-color: #8c0000; padding: 2px !important; } 
+        .col-limit-buy { background-color: rgba(0, 21, 148, 0.8); padding: 2px !important; } 
+        .col-limit-sell { background-color: rgba(140, 0, 0, 0.8); padding: 2px !important; } 
         
-        .pnl-loss { color: #dc3545; font-weight: bold; }
-        .pnl-profit { color: #28a745; font-weight: bold; }
-        
-        .delta-positive { color: #28a745; font-weight: bold; background-color: #e6f4ea; }
-        .delta-negative { color: #dc3545; font-weight: bold; background-color: #fce8e6; }
+        .delta-positive { color: #4ade80; font-weight: bold; background-color: rgba(74, 222, 128, 0.1); }
+        .delta-negative { color: #f87171; font-weight: bold; background-color: rgba(248, 113, 113, 0.1); }
         
         .col-volume {
             position: relative;
             font-weight: bold;
-            color: #333;
+            color: #fff;
             text-align: left;
             padding: 4px 6px !important;
             min-width: 80px;
@@ -231,52 +248,52 @@
             width: 100%;
             height: 18px;
             line-height: 18px;
-            border: 1px solid #cbd5e1; 
+            border: 1px solid #475569; 
             border-radius: 3px;
             padding-left: 4px;
             box-sizing: border-box;
-            background-color: #ffffff;
+            background-color: #1e293b;
             transition: background 0.15s ease;
+            text-shadow: 1px 1px 2px black;
         }
         
         .current-price {
-            background-color: #fff3cd !important;
+            background-color: rgba(234, 179, 8, 0.2) !important;
             font-weight: bold;
         }
 
         .current-price-box {
             display: inline-block;
-            border: 2px solid #ff0000; 
+            border: 2px solid #fbbf24; 
             padding: 2px 6px;
             border-radius: 3px;
-            background-color: #ffffff;
-            color: #000000;
+            background-color: #000000;
+            color: #fbbf24;
         }
 
-        .best-ask-box { color: #dc3545; font-weight: bold; }
-        .best-bid-box { color: #001594; font-weight: bold; }
+        .best-ask-box { color: #fca5a5; font-weight: bold; }
+        .best-bid-box { color: #93c5fd; font-weight: bold; }
 
-        /* 手機版排版微調 */
         @media (max-width: 600px) {
             .control-panel { padding: 10px; gap: 8px; }
             .btn { padding: 6px 10px; font-size: 12px; }
-            .hotkey-tip { display: none; /* 手機不顯示快捷鍵提示 */ }
+            .hotkey-tip { display: none; }
         }
     </style>
 </head>
 <body>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
-    <div class="team-subtitle">DOM與動態成交視覺模擬器</div>
+    <div class="team-subtitle">K線與熱圖分離版 DOM 模擬器</div>
 
     <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
 
     <div class="control-panel">
-        <label style="font-size: 13px;">
+        <label style="font-size: 13px; cursor: pointer;">
             <input type="checkbox" id="slip-control" checked> 無滑點控制
         </label>
         
-        <button class="btn btn-random" onclick="randomizeLimitOrders()">🎲 隨機配置 (重置)</button>
+        <button class="btn btn-random" onclick="randomizeLimitOrders()">🎲 隨機配置</button>
         <button id="btn-toggle-autofill" class="btn btn-toggle-on" onclick="toggleAutoFill()">🤖 造市補單：開啟中</button>
         <button id="btn-toggle-mute" class="btn btn-mute-off" onclick="toggleMute()">🔊 音效：開啟</button>
         
@@ -309,12 +326,20 @@
 
     <div class="responsive-wrapper">
         <div class="main-container">
-            <canvas id="kline-canvas" width="160" height="420"></canvas>
+            
+            <div class="canvas-container">
+                <div class="canvas-label">動態 K 線 (5s/根)</div>
+                <canvas id="kline-canvas" width="220" height="420"></canvas>
+            </div>
+
+            <div class="canvas-container">
+                <div class="canvas-label">DOM 熱圖軌跡</div>
+                <canvas id="heatmap-canvas" width="220" height="420"></canvas>
+            </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>PnL/Tick</th>
                         <th>限價多</th>
                         <th>市價空</th>
                         <th>Price</th>
@@ -338,11 +363,22 @@
     let isMuted = false;              
     let autoTradingTimer = null;      
 
+    // --- 熱圖參數 ---
+    const HEATMAP_COLUMNS = 75; 
+    let heatmapHistory = [];
+    let heatmapTimer = null;
+
+    // --- 歷史 K 線參數 ---
+    const KLINE_INTERVAL = 5000; 
+    const MAX_KLINES = 12;       
+    let klineHistory = [];       
+    let klineIntervalTimer = null; 
+
     let targetKLine = { open: 0, high: 0, low: 0, close: 0 };
     let currentKLine = { open: 0, high: 0, low: 0, close: 0 };
 
     function getHunYuanFont() {
-        return '12px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
+        return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
     }
 
     function resetMarketData() {
@@ -359,6 +395,7 @@
                 volume: 0      
             });
         }
+        heatmapHistory = []; 
     }
 
     let globalAudioCtx = null;
@@ -368,7 +405,6 @@
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             globalAudioCtx = new AudioContext();
         }
-        // 喚醒被手機瀏覽器休眠的音訊引擎
         if (globalAudioCtx.state === 'suspended') {
             globalAudioCtx.resume();
         }
@@ -388,16 +424,12 @@
                 frequencies.forEach((freq, index) => {
                     const osc = globalAudioCtx.createOscillator();
                     const oscGain = globalAudioCtx.createGain();
-                    
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(freq, globalAudioCtx.currentTime);
-                    
                     oscGain.gain.setValueAtTime(index === 0 ? 0.25 : 0.12, globalAudioCtx.currentTime);
                     oscGain.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 1.2);
-                    
                     osc.connect(oscGain);
                     oscGain.connect(masterGain);
-                    
                     osc.start();
                     osc.stop(globalAudioCtx.currentTime + 1.3);
                 });
@@ -406,10 +438,8 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(280, globalAudioCtx.currentTime);
                 osc.frequency.linearRampToValueAtTime(140, globalAudioCtx.currentTime + 0.08);
-
                 masterGain.gain.setValueAtTime(0.4, globalAudioCtx.currentTime);
                 masterGain.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 0.12);
-
                 osc.connect(masterGain);
                 osc.start();
                 osc.stop(globalAudioCtx.currentTime + 0.15);
@@ -419,80 +449,235 @@
         }
     }
 
-    function animateKLine() {
+    function recordHeatmapSnapshot() {
+        if (marketData.length === 0) return;
+        let snapshot = {
+            price: marketData[currentPriceIndex].price,
+            depth: marketData.map(r => ({ b: r.limitBuy, s: r.limitSell }))
+        };
+        heatmapHistory.push(snapshot);
+        if(heatmapHistory.length > HEATMAP_COLUMNS) heatmapHistory.shift();
+    }
+
+    function startEngines() {
+        if(heatmapTimer) clearInterval(heatmapTimer);
+        heatmapTimer = setInterval(recordHeatmapSnapshot, 100); 
+
+        if(klineIntervalTimer) clearInterval(klineIntervalTimer);
+        klineIntervalTimer = setInterval(() => {
+            klineHistory.push({
+                open: targetKLine.open,
+                high: targetKLine.high,
+                low: targetKLine.low,
+                close: targetKLine.close
+            });
+            if(klineHistory.length > MAX_KLINES) klineHistory.shift();
+
+            let currentClose = targetKLine.close;
+            targetKLine = { open: currentClose, high: currentClose, low: currentClose, close: currentClose };
+            currentKLine = { open: currentClose, high: currentClose, low: currentClose, close: currentClose };
+        }, KLINE_INTERVAL);
+    }
+
+    // 【全新重構】自適應畫布 Y 軸轉換函數：全自動捕捉最大與最小值進行比例縮放
+    function getDynamicY(price, canvasHeight, allBars) {
+        if (allBars.length === 0) {
+            // 如果暫時沒有任何數據，使用原本的固定預設比例計算
+            let percentage = (2980.6 - price) / (2980.6 - 2979.2);
+            return 35 + percentage * (canvasHeight - 65);
+        }
+
+        // 撈出目前所有歷史與當前 K 線中的極端最高價與最低價
+        let minP = Infinity;
+        let maxP = -Infinity;
+        allBars.forEach(b => {
+            if (b.low < minP) minP = b.low;
+            if (b.high > maxP) maxP = b.high;
+        });
+
+        // 加上適度的上下邊距留白（Buffer），避免價格貼死在畫布邊緣
+        let padding = (maxP - minP) * 0.15;
+        if (padding === 0) padding = 0.2; // 防止完全平盤時除以零
+        
+        let minBound = minP - padding;
+        let maxBound = maxP + padding;
+
+        // 計算對應的 Y 軸座標
+        let ratio = (price - minBound) / (maxBound - minBound);
+        // 倒轉網頁 Y 軸（網頁上方是0，所以用高度去減）
+        return (canvasHeight - 40) - (ratio * (canvasHeight - 65));
+    }
+
+    // 固定熱圖專用的原版 Y 軸轉換，保持熱圖與 DOM 表格的行橫向平行對齊
+    function getFixedYForHeatmap(price) {
+        let percentage = (2980.6 - price) / (2980.6 - 2979.2);
+        return 35 + percentage * (390 - 35);
+    }
+
+    function drawGridLines(ctx, width, height, isDynamic, allBars) {
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1;
+        
+        if (!isDynamic) {
+            // 熱圖固定隔線：直接對應 15 檔位
+            for (let i = 0; i <= 15; i++) {
+                let y = 35 + (i * 25.3); 
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+        } else {
+            // K線動態隔線：改用固定間距繪製背景參考線
+            for (let i = 0; i <= 10; i++) {
+                let y = 25 + (i * (height - 50) / 10);
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+        }
+    }
+
+    function animateAll() {
         currentKLine.open  += (targetKLine.open  - currentKLine.open)  * 0.18;
         currentKLine.close += (targetKLine.close - currentKLine.close) * 0.18;
         currentKLine.high  += (targetKLine.high  - currentKLine.high)  * 0.18;
         currentKLine.low   += (targetKLine.low   - currentKLine.low)   * 0.18;
 
-        drawKLineCanvas(currentKLine);
-        requestAnimationFrame(animateKLine);
+        drawKLineCanvas();
+        drawHeatmapCanvas();
+        requestAnimationFrame(animateAll);
     }
 
-    function drawKLineCanvas(candle) {
+    // 【分離的區塊 1】獨立繪製 K 線窗格（完美實現自由縮放不侷限高低點）
+    function drawKLineCanvas() {
         const canvas = document.getElementById('kline-canvas');
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = '#2d2d2d';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 15; i++) {
-            let y = 35 + (i * 25.3); 
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
-        }
+        // 打包目前畫面上所有的 K 線數據（包含歷史陣列與當前動態成型中的那一根）
+        let allBars = [...klineHistory, { high: currentKLine.high, low: currentKLine.low }];
 
-        function getXyByPrice(price) {
-            let percentage = (2980.6 - price) / (2980.6 - 2979.2);
-            return 35 + percentage * (390 - 35);
-        }
+        // 繪製背景參考格線
+        drawGridLines(ctx, canvas.width, canvas.height, true, allBars);
 
-        let yOpen = getXyByPrice(candle.open);
-        let yClose = getXyByPrice(candle.close);
-        let yHigh = getXyByPrice(candle.high);
-        let yLow = getXyByPrice(candle.low);
+        let colWidth = canvas.width / (MAX_KLINES + 1.5); 
+        let candleWidth = colWidth * 0.6; 
 
-        let isBullish = candle.close >= candle.open;
-        let themeColor = isBullish ? '#28a745' : '#dc3545';
+        // --- 1. 繪製歷史 K 線 ---
+        klineHistory.forEach((candle, index) => {
+            let xCenter = (index + 0.5) * colWidth;
+            let yOpen = getDynamicY(candle.open, canvas.height, allBars);
+            let yClose = getDynamicY(candle.close, canvas.height, allBars);
+            let yHigh = getDynamicY(candle.high, canvas.height, allBars);
+            let yLow = getDynamicY(candle.low, canvas.height, allBars);
+            
+            let isBullish = candle.close >= candle.open;
+            let themeColor = isBullish ? '#4ade80' : '#f87171';
 
-        let centerX = canvas.width / 2;
+            ctx.strokeStyle = themeColor;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(xCenter, yHigh); ctx.lineTo(xCenter, yLow); ctx.stroke();
 
-        ctx.strokeStyle = themeColor;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(centerX, yHigh);
-        ctx.lineTo(centerX, yLow);
-        ctx.stroke();
+            ctx.fillStyle = themeColor;
+            let boxHeight = yClose - yOpen;
+            if (Math.abs(boxHeight) < 1.5) boxHeight = isBullish ? -1.5 : 1.5; 
+            ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
+        });
 
-        ctx.fillStyle = themeColor;
-        let boxWidth = 36;
-        let boxHeight = yClose - yOpen;
-        
-        if (Math.abs(boxHeight) < 2) {
-            boxHeight = isBullish ? -2 : 2;
-        }
-        ctx.fillRect(centerX - boxWidth / 2, yOpen, boxWidth, boxHeight);
+        // --- 2. 繪製最右側當前動態成型的果凍 K 線 ---
+        let currentXCenter = (klineHistory.length + 0.5) * colWidth;
+        let yOpenCurr = getDynamicY(currentKLine.open, canvas.height, allBars);
+        let yCurrentSmooth = getDynamicY(currentKLine.close, canvas.height, allBars);
+        let yHighCurr = getDynamicY(currentKLine.high, canvas.height, allBars);
+        let yLowCurr = getDynamicY(currentKLine.low, canvas.height, allBars);
 
-        let yCurrent = getXyByPrice(candle.close);
-        ctx.strokeStyle = '#fff3cd';
+        let isBullishCurr = currentKLine.close >= currentKLine.open;
+        let themeColorCurr = isBullishCurr ? '#4ade80' : '#f87171';
+
+        ctx.strokeStyle = themeColorCurr;
+        ctx.lineWidth = 2.5; 
+        ctx.beginPath(); ctx.moveTo(currentXCenter, yHighCurr); ctx.lineTo(currentXCenter, yLowCurr); ctx.stroke();
+
+        ctx.fillStyle = themeColorCurr;
+        let boxHeightCurr = yCurrentSmooth - yOpenCurr;
+        if (Math.abs(boxHeightCurr) < 2) boxHeightCurr = isBullishCurr ? -2 : 2;
+        ctx.fillRect(currentXCenter - (candleWidth / 2), yOpenCurr, candleWidth, boxHeightCurr);
+
+        // --- 3. 現價水平跟隨雷射線 ---
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, yCurrent);
-        ctx.lineTo(canvas.width, yCurrent);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, yCurrentSmooth); ctx.lineTo(canvas.width, yCurrentSmooth); ctx.stroke();
         ctx.setLineDash([]); 
 
+        let currentRealPrice = marketData[currentPriceIndex].price;
         ctx.fillStyle = '#ffffff';
         ctx.font = getHunYuanFont(); 
-        ctx.fillText(`現價: ${marketData[currentPriceIndex].price.toFixed(1)}`, 10, canvas.height - 15);
+        ctx.fillText(`現價: ${currentRealPrice.toFixed(1)}`, 5, canvas.height - 12);
+    }
+
+    // 【分離的區塊 2】獨立繪製 DOM 熱圖瀑布流（保持與 DOM 表格橫向對齊平行）
+    function drawHeatmapCanvas() {
+        const canvas = document.getElementById('heatmap-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawGridLines(ctx, canvas.width, canvas.height, false, []);
+
+        if (heatmapHistory.length === 0) return;
+
+        let colWidth = canvas.width / HEATMAP_COLUMNS;
+        let maxDepthParam = 30; 
+
+        heatmapHistory.forEach((snap, hIndex) => {
+            let x = canvas.width - ((heatmapHistory.length - hIndex) * colWidth);
+            
+            snap.depth.forEach((d, rIndex) => {
+                let yCenter = 35 + (rIndex * 25.3);
+                let rectY = yCenter - 12.6; 
+                let rectH = 25.4; 
+
+                if (d.s > 0) {
+                    let alpha = Math.min(d.s / maxDepthParam, 1);
+                    ctx.fillStyle = `rgba(220, 53, 69, ${alpha * 0.9})`;
+                    ctx.fillRect(x, rectY, colWidth + 0.6, rectH); 
+                } else if (d.b > 0) {
+                    let alpha = Math.min(d.b / maxDepthParam, 1);
+                    ctx.fillStyle = `rgba(0, 100, 255, ${alpha * 0.9})`; 
+                    ctx.fillRect(x, rectY, colWidth + 0.6, rectH);
+                }
+            });
+        });
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#fbbf24'; 
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+
+        heatmapHistory.forEach((snap, hIndex) => {
+            let x = canvas.width - ((heatmapHistory.length - hIndex) * colWidth) + (colWidth / 2);
+            let y = getFixedYForHeatmap(snap.price);
+            
+            if (hIndex === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                let prevSnap = heatmapHistory[hIndex - 1];
+                let prevY = getFixedYForHeatmap(prevSnap.price);
+                ctx.lineTo(x, prevY); 
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+        ctx.shadowBlur = 0; 
+
+        let yCurrentSmoothFixed = getFixedYForHeatmap(currentKLine.close);
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, yCurrentSmoothFixed); ctx.lineTo(canvas.width, yCurrentSmoothFixed); ctx.stroke();
+        ctx.setLineDash([]); 
     }
 
     function randomizeLimitOrders() {
         currentPriceIndex = 7;
         resetMarketData(); 
+        klineHistory = []; 
 
         marketData.forEach((row, index) => {
             if (index < currentPriceIndex) {
@@ -506,10 +691,11 @@
         targetKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
         currentKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
 
-        if (isAutoFillEnabled) {
-            autoFillMarketDepth();
-        }
+        if (isAutoFillEnabled) autoFillMarketDepth();
         renderDOM();
+        
+        for(let i=0; i<HEATMAP_COLUMNS; i++) recordHeatmapSnapshot(); 
+        startEngines(); 
     }
 
     function toggleAutoFill() {
@@ -536,7 +722,7 @@
         } else {
             btn.className = "btn btn-mute-off";
             btn.innerText = "🔊 音效：開啟";
-            initAudio(); // 確保重新開啟時喚醒
+            initAudio(); 
         }
     }
 
@@ -591,7 +777,6 @@
         });
     }
 
-    // 手機版觸控與電腦版點擊事件，皆用來喚醒音效
     window.addEventListener('click', initAudio);
     window.addEventListener('touchstart', initAudio, {passive: true});
 
@@ -603,14 +788,14 @@
             event.preventDefault();
             handleMarketOrder('BUY', null);
             const btn = document.getElementById('btn-buy-panel');
-            btn.style.opacity = '0.5';
-            setTimeout(() => btn.style.opacity = '1', 100);
+            btn.style.transform = 'translateY(2px)';
+            setTimeout(() => btn.style.transform = 'none', 100);
         } else if (key === 's') {
             event.preventDefault();
             handleMarketOrder('SELL', null);
             const btn = document.getElementById('btn-sell-panel');
-            btn.style.opacity = '0.5';
-            setTimeout(() => btn.style.opacity = '1', 100);
+            btn.style.transform = 'translateY(2px)';
+            setTimeout(() => btn.style.transform = 'none', 100);
         }
     });
 
@@ -643,25 +828,14 @@
 
         marketData.forEach((row, index) => {
             const tr = document.createElement('tr');
-            
-            let pnlText = '';
-            let pnlClass = '';
-            let rowBgClass = '';
             let isCurrentPriceRow = (index === currentPriceIndex);
+            let rowBgClass = '';
 
             if (index < currentPriceIndex) {
-                let ticks = currentPriceIndex - index;
-                pnlText = `-${ticks * 10}`;
-                pnlClass = 'pnl-loss';
                 rowBgClass = 'bg-ask-zone';
             } else if (index > currentPriceIndex) {
-                let ticks = index - currentPriceIndex;
-                pnlText = `+${ticks * 10}`;
-                pnlClass = 'pnl-profit';
                 rowBgClass = 'bg-bid-zone';
             } else {
-                pnlText = '+10';
-                pnlClass = 'pnl-profit';
                 rowBgClass = 'current-price';
             }
 
@@ -679,17 +853,17 @@
 
             let buyLimitPercentage = (row.limitBuy / maxLimitParam) * 100;
             let buyLimitStyle = row.limitBuy > 0 
-                ? `background: linear-gradient(to left, rgba(0, 21, 148, 0.55) ${buyLimitPercentage}%, #001594 ${buyLimitPercentage}%);` 
-                : 'background-color: #001594;';
+                ? `background: linear-gradient(to left, rgba(0, 100, 255, 0.4) ${buyLimitPercentage}%, rgba(0, 21, 148, 0.8) ${buyLimitPercentage}%);` 
+                : 'background-color: transparent;';
 
             let sellLimitPercentage = (row.limitSell / maxLimitParam) * 100;
             let sellLimitStyle = row.limitSell > 0 
-                ? `background: linear-gradient(to right, rgba(140, 0, 0, 0.55) ${sellLimitPercentage}%, #8c0000 ${sellLimitPercentage}%);` 
-                : 'background-color: #8c0000;';
+                ? `background: linear-gradient(to right, rgba(220, 53, 69, 0.4) ${sellLimitPercentage}%, rgba(140, 0, 0, 0.8) ${sellLimitPercentage}%);` 
+                : 'background-color: transparent;';
 
             let volPercentage = (row.volume / maxVolume) * 100;
             let isVolumeLeader = (row.volume > 0 && row.volume === maxVolume);
-            let barColor = isVolumeLeader ? '#fca5a5' : '#e2e8f0';
+            let barColor = isVolumeLeader ? '#fca5a5' : '#64748b';
 
             let volStyle = row.volume > 0 
                 ? `background: linear-gradient(to right, ${barColor} ${volPercentage}%, transparent ${volPercentage}%);` 
@@ -706,8 +880,8 @@
                 priceDisplay = `<span class="best-bid-box">[ ${priceFormatted} ]</span>`;
             }
 
+            // 輸出 HTML：已將原本的 PNL/TICK td 移除
             tr.innerHTML = `
-                <td class="${pnlClass}">${pnlText}</td>
                 <td class="col-limit-buy" style="${buyLimitStyle}">
                     <input type="number" class="cell-input" value="${row.limitBuy || ''}" min="0" onchange="updateLimitValue(${index}, 'limitBuy', this.value)">
                 </td>
@@ -788,10 +962,9 @@
         if (newPrice > targetKLine.high) targetKLine.high = newPrice; 
         if (newPrice < targetKLine.low) targetKLine.low = newPrice;   
 
-        if (isAutoFillEnabled) {
-            autoFillMarketDepth();
-        }
+        if (isAutoFillEnabled) autoFillMarketDepth();
         renderDOM(); 
+        recordHeatmapSnapshot(); 
     }
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -802,8 +975,8 @@
         }
     });
 
-    randomizeLimitOrders();
-    animateKLine(); 
+    randomizeLimitOrders(); 
+    animateAll();       
 </script>
 </body>
 </html>
