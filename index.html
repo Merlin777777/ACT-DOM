@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (CVD & OI 雙蠟燭圖版)</title>
+    <title>Asia Crazy Team 封神戰隊 - DOM模擬器</title>
     <style>
         /* 本地字體對應 */
         @font-face {
@@ -80,46 +80,6 @@
             max-width: 1000px;
             border: 1px solid #333;
         }
-        
-        .dashboard-bar {
-            display: flex;
-            gap: 40px;
-            align-items: center;
-            background: linear-gradient(90deg, #18181b, #27272a, #18181b);
-            padding: 10px 30px;
-            border-radius: 8px;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.4);
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-            width: 100%;
-            max-width: 1000px;
-            border: 1px solid #3f3f46;
-        }
-
-        .stat-box {
-            font-size: 15px;
-            font-weight: bold;
-            color: #9ca3af;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .stat-value {
-            font-size: 22px;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-weight: 900;
-            letter-spacing: 1px;
-            background: #000;
-            padding: 2px 10px;
-            border-radius: 4px;
-            border: 1px solid #333;
-        }
-
-        .text-green { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
-        .text-red { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.4); }
-        .text-gold { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
         
         .control-group {
             display: flex;
@@ -281,7 +241,6 @@
             border-bottom: none;
         }
 
-        /* 視圖加長至 650px，對齊畫布加長 */
         #dom-viewport {
             height: 650px; 
             overflow: hidden; 
@@ -316,6 +275,7 @@
             border-bottom: 2px solid #121212;
         }
         
+        /* 表格內輸入框樣式 */
         .cell-input {
             width: 100%;
             background: transparent;
@@ -326,7 +286,7 @@
             outline: none;
             color: white !important; 
         }
-        
+
         .bg-ask-zone { background-color: rgba(220, 53, 69, 0.08); } 
         .bg-bid-zone { background-color: rgba(0, 123, 255, 0.08); } 
         
@@ -377,9 +337,11 @@
         .best-ask-box { color: #fca5a5; font-weight: bold; font-size: 15px;}
         .best-bid-box { color: #93c5fd; font-weight: bold; font-size: 15px;}
 
+        .price-click-zone { cursor: pointer; transition: background 0.1s; }
+        .price-click-zone:hover { background-color: rgba(255, 255, 255, 0.1); }
+
         @media (max-width: 800px) {
             .control-panel { padding: 10px; gap: 8px; }
-            .dashboard-bar { gap: 15px; padding: 10px; }
             .btn { padding: 6px 10px; font-size: 12px; }
             .hotkey-tip { display: none; }
             .control-group { border-right: none; }
@@ -389,10 +351,11 @@
 <body>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
-    <div class="team-subtitle">DOM模擬器 (CVD & OI 雙蠟燭圖版)</div>
+    <div class="team-subtitle">DOM模擬器</div>
 
     <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
 
+    <!-- 系統控制與市價單面板 -->
     <div class="control-panel">
         <div class="control-group">
             <button class="btn btn-random" onclick="randomizeLimitOrders()">🎲 隨機配置</button>
@@ -414,12 +377,12 @@
         </div>
 
         <div class="control-group">
-            <label class="filter-label" title="只顯示大於此總量的氣泡">
+            <label class="filter-label" title="氣泡過濾門檻">
                 🎯 氣泡過濾 &ge;
                 <input type="number" id="big-trade-filter" class="input-qty" value="100" min="1" style="width: 55px; padding: 4px;">
             </label>
         </div>
-        
+
         <div class="control-group" style="gap: 15px;">
             <div style="display: flex; align-items: center; gap: 5px;">
                 <div>
@@ -441,14 +404,26 @@
         </div>
     </div>
 
-    <div class="dashboard-bar">
-        <div class="stat-box">
-            📈 累積買賣力道 (CVD): 
-            <span id="dash-cvd" class="stat-value text-green">+0</span>
-        </div>
-        <div class="stat-box">
-            📜 未平倉量 (OI): 
-            <span id="dash-oi" class="stat-value text-gold">245,000</span>
+    <!-- 獨立限價單操作面板 -->
+    <div class="control-panel" style="background-color: #1e293b; border-color: #3b82f6; max-width: 800px;">
+        <div class="control-group" style="border: none; width: 100%; justify-content: center;">
+            <span style="color: #93c5fd; font-weight: bold; margin-right: 15px; font-size: 15px;">🎯 獨立限價單面板</span>
+            
+            <select id="limit-side" class="select-speed" style="margin-right: 10px; background-color: #0f172a; border-color: #475569;">
+                <option value="BUY">買單 (Bid)</option>
+                <option value="SELL">賣單 (Ask)</option>
+            </select>
+            
+            <span style="font-weight: bold; font-size: 14px; margin-right: 5px;">價格:</span>
+            <input type="number" id="limit-target-price" class="input-qty" step="0.1" value="2982.1" style="width: 85px; margin-right: 15px;">
+            
+            <span style="font-weight: bold; font-size: 14px; margin-right: 5px;">數量:</span>
+            <input type="number" id="limit-target-qty" class="input-qty" value="100" min="1" style="width: 75px; margin-right: 20px;">
+            
+            <button class="btn btn-toggle-on" style="background-color: #2563eb; margin-right: 8px;" onclick="handleManualLimit('ADD')">掛單</button>
+            <button class="btn" style="background-color: #475569;" onclick="handleManualLimit('CANCEL')">撤單</button>
+            
+            <span class="hotkey-tip" style="display: block; width: 100%; text-align: center; margin-top: 5px; color: #cbd5e1;">( 💡 提示：點擊下方表格中的「價格」數字，可快速代入目標價格；或者也可直接在表格左右兩側輸入數字掛單 )</span>
         </div>
     </div>
 
@@ -498,7 +473,6 @@
     const DOM_SAFE_ZONE = 6;    
     const ROW_HEIGHT = 35;      
 
-    // CVD & OI 全局變數
     let globalCVD = 0;
     let globalOI = 245000 + Math.floor(Math.random() * 10000);
 
@@ -514,9 +488,7 @@
 
     let currentHeatmapTrades = [];
     let currentKLineTrades = [];
-
-    let isIcebergMode = true;
-    let currentIceberg = { active: false, side: 'BUY', remaining: 0 };
+    let activeSpoof = null;
 
     const HEATMAP_COLUMNS = 75; 
     let heatmapHistory = [];
@@ -527,7 +499,6 @@
     let klineHistory = [];       
     let klineIntervalTimer = null; 
 
-    // ★ K線物件中加入 CVD 與 OI 的 OHLC (開高低收)
     let targetKLine = { 
         open: 0, high: 0, low: 0, close: 0, 
         cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0,
@@ -543,21 +514,8 @@
         return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
     }
 
-    // 更新計算以匹配高度 650px 的視圖
     function getBaseTranslateY() {
         return (650 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
-    }
-
-    function updateDashboard() {
-        const cvdEl = document.getElementById('dash-cvd');
-        const oiEl = document.getElementById('dash-oi');
-        
-        let cvdPrefix = globalCVD >= 0 ? '+' : '';
-        let cvdStr = cvdPrefix + globalCVD.toLocaleString();
-        cvdEl.innerText = cvdStr;
-        cvdEl.className = globalCVD >= 0 ? 'stat-value text-green' : 'stat-value text-red';
-        
-        oiEl.innerText = globalOI.toLocaleString();
     }
 
     function getDynamicLimitQty() {
@@ -578,10 +536,10 @@
         marketData = [];
         currentHeatmapTrades = [];
         currentKLineTrades = [];
+        activeSpoof = null;
         
         globalCVD = 0;
         globalOI = 245000 + Math.floor(Math.random() * 10000);
-        updateDashboard();
 
         let basePrice = 2982.1;
         
@@ -665,6 +623,7 @@
             });
             currentPriceIndex++; 
             renderAnchorIndex++; 
+            if(activeSpoof) activeSpoof.index++;
         }
         while (currentPriceIndex > marketData.length - 41) {
             let lowestPrice = marketData[marketData.length - 1].price;
@@ -708,30 +667,16 @@
 
         if(klineIntervalTimer) clearInterval(klineIntervalTimer);
         klineIntervalTimer = setInterval(() => {
-            // 推入歷史資料
             klineHistory.push({
-                open: targetKLine.open,
-                high: targetKLine.high,
-                low: targetKLine.low,
-                close: targetKLine.close,
-                
-                cvdOpen: targetKLine.cvdOpen,
-                cvdHigh: targetKLine.cvdHigh,
-                cvdLow: targetKLine.cvdLow,
-                cvdClose: targetKLine.cvdClose,
-                
-                oiOpen: targetKLine.oiOpen,
-                oiHigh: targetKLine.oiHigh,
-                oiLow: targetKLine.oiLow,
-                oiClose: targetKLine.oiClose,
-                
+                open: targetKLine.open, high: targetKLine.high, low: targetKLine.low, close: targetKLine.close,
+                cvdOpen: targetKLine.cvdOpen, cvdHigh: targetKLine.cvdHigh, cvdLow: targetKLine.cvdLow, cvdClose: targetKLine.cvdClose,
+                oiOpen: targetKLine.oiOpen, oiHigh: targetKLine.oiHigh, oiLow: targetKLine.oiLow, oiClose: targetKLine.oiClose,
                 trades: currentKLineTrades 
             });
             if(klineHistory.length > MAX_KLINES) klineHistory.shift();
 
             currentKLineTrades = []; 
             
-            // 換線，傳承收盤價
             let currentClose = targetKLine.close;
             let currentCvdClose = targetKLine.cvdClose;
             let currentOiClose = targetKLine.oiClose;
@@ -742,6 +687,37 @@
                 oiOpen: currentOiClose, oiHigh: currentOiClose, oiLow: currentOiClose, oiClose: currentOiClose
             };
         }, KLINE_INTERVAL);
+        
+        setInterval(processSpoofing, 1200);
+    }
+
+    function processSpoofing() {
+        if (!isAutoTradingEnabled) return;
+        
+        if (activeSpoof) {
+            let row = marketData[activeSpoof.index];
+            if (row) {
+                if (activeSpoof.side === 'BUY') row.limitBuy = Math.max(0, row.limitBuy - activeSpoof.qty);
+                if (activeSpoof.side === 'SELL') row.limitSell = Math.max(0, row.limitSell - activeSpoof.qty);
+            }
+            activeSpoof = null;
+            renderDOM();
+        }
+
+        if (Math.random() < 0.15) {
+            let side = Math.random() > 0.5 ? 'BUY' : 'SELL';
+            let offset = Math.floor(Math.random() * 4) + 2; 
+            let targetIndex = side === 'BUY' ? currentPriceIndex + offset : currentPriceIndex - offset;
+            
+            if (targetIndex >= 0 && targetIndex < marketData.length) {
+                let qty = Math.floor(Math.random() * 800) + 500; 
+                if (side === 'BUY') marketData[targetIndex].limitBuy += qty;
+                if (side === 'SELL') marketData[targetIndex].limitSell += qty;
+                
+                activeSpoof = { index: targetIndex, side: side, qty: qty };
+                renderDOM();
+            }
+        }
     }
 
     function getDynamicY(price, klineAreaHeight, allBars) {
@@ -844,14 +820,13 @@
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // ★ 畫布分配：價格 400px, CVD 150px, OI 150px = 總高 700px
         let klineAreaH = 400;
         let cvdAreaTop = 400;
         let cvdAreaH = 150; 
         let oiAreaTop = 550;
         let oiAreaH = 150; 
 
-        // ================= 1. 價格 K 線 =================
+        // === 1. 價格 K 線 ===
         let allBars = [...klineHistory, { high: currentKLine.high, low: currentKLine.low }];
         let minP = Infinity, maxP = -Infinity;
         allBars.forEach(b => {
@@ -923,7 +898,7 @@
         ctx.font = getHunYuanFont(); 
         ctx.fillText(`現價: ${currentRealPrice.toFixed(1)}`, 60, klineAreaH - 10);
 
-        // ================= 2. CVD 蠟燭圖 =================
+        // === 2. CVD 蠟燭圖 ===
         ctx.strokeStyle = '#3f3f46';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, cvdAreaTop); ctx.lineTo(canvas.width, cvdAreaTop); ctx.stroke();
@@ -960,10 +935,6 @@
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(canvas.width, zeroY); ctx.stroke();
             ctx.setLineDash([]);
-            
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.textAlign = 'right';
-            ctx.fillText('0', canvas.width - 5, zeroY - 4);
         }
 
         allCvdBars.forEach((candle, index) => {
@@ -990,7 +961,7 @@
             ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
         });
 
-        // ================= 3. OI 蠟燭圖 =================
+        // === 3. OI 蠟燭圖 ===
         ctx.strokeStyle = '#3f3f46';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, oiAreaTop); ctx.lineTo(canvas.width, oiAreaTop); ctx.stroke();
@@ -1027,7 +998,6 @@
             let yLow = getOiY(candle.oiLow);
 
             let isOiBullish = candle.oiClose >= candle.oiOpen;
-            // OI 增加用金黃色，OI 減少平倉用淺藍色，以便與價格及 CVD 區分
             let oiColor = isOiBullish ? '#fbbf24' : '#60a5fa';
 
             ctx.strokeStyle = oiColor;
@@ -1183,14 +1153,6 @@
         }
     }
 
-    function toggleIcebergMode() {
-        isIcebergMode = document.getElementById('iceberg-mode').checked;
-        if (!isIcebergMode) {
-            currentIceberg.active = false;
-            currentIceberg.remaining = 0;
-        }
-    }
-
     function restartDirectionalInterval(side) {
         let speed = parseInt(document.getElementById('select-speed').value);
         if (side === 'BUY') {
@@ -1247,31 +1209,8 @@
     function startAutoInterval() {
         let speed = parseInt(document.getElementById('select-speed').value);
         autoTradingTimer = setInterval(() => {
-            let side, qty;
-            if (isIcebergMode) {
-                if (currentIceberg.remaining <= 0) {
-                    if (Math.random() < 0.35) { 
-                        currentIceberg.active = true;
-                        currentIceberg.side = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                        currentIceberg.remaining = Math.floor(Math.random() * 500) + 300; 
-                    } else {
-                        currentIceberg.active = false;
-                    }
-                }
-                if (currentIceberg.active && currentIceberg.remaining > 0) {
-                    side = currentIceberg.side;
-                    qty = Math.floor(Math.random() * 80) + 20; 
-                    if (qty > currentIceberg.remaining) qty = currentIceberg.remaining;
-                    currentIceberg.remaining -= qty;
-                    if (Math.random() < 0.15) qty = 0; 
-                } else {
-                    side = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                    qty = getDynamicRandomQty(); 
-                }
-            } else {
-                side = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                qty = getDynamicRandomQty(); 
-            }
+            let side = Math.random() > 0.5 ? 'BUY' : 'SELL';
+            let qty = getDynamicRandomQty(); 
             if (qty > 0) handleMarketOrder(side, qty);
         }, speed);
     }
@@ -1295,14 +1234,10 @@
     function autoFillMarketDepth() {
         marketData.forEach((row, index) => {
             if (index < currentPriceIndex) {
-                if (row.limitSell === 0 && row.limitBuy === 0) {
-                    row.limitSell = getDynamicLimitQty();
-                }
+                if (row.limitSell === 0 && row.limitBuy === 0) row.limitSell = getDynamicLimitQty();
                 row.limitBuy = 0; 
             } else if (index > currentPriceIndex) {
-                if (row.limitBuy === 0 && row.limitSell === 0) {
-                    row.limitBuy = getDynamicLimitQty();
-                }
+                if (row.limitBuy === 0 && row.limitSell === 0) row.limitBuy = getDynamicLimitQty();
                 row.limitSell = 0; 
             } else {
                 row.limitBuy = 0;
@@ -1333,8 +1268,56 @@
         }
     });
 
+    function handleManualLimit(action) {
+        let side = document.getElementById('limit-side').value;
+        let price = parseFloat(document.getElementById('limit-target-price').value);
+        let qty = parseInt(document.getElementById('limit-target-qty').value);
+
+        if (isNaN(price) || isNaN(qty) || qty <= 0) {
+            alert("請輸入有效的掛單價格與數量！");
+            return;
+        }
+
+        while (price > marketData[0].price + 0.05) {
+            let newPrice = marketData[0].price + 0.1;
+            marketData.unshift({
+                price: newPrice, limitBuy: 0, limitSell: isAutoFillEnabled ? getDynamicLimitQty() : 0,
+                marketSell: 0, marketBuy: 0, delta: 0, volume: 0
+            });
+            currentPriceIndex++; renderAnchorIndex++;
+            if(activeSpoof) activeSpoof.index++;
+        }
+        while (price < marketData[marketData.length - 1].price - 0.05) {
+            let newPrice = marketData[marketData.length - 1].price - 0.1;
+            marketData.push({
+                price: newPrice, limitBuy: isAutoFillEnabled ? getDynamicLimitQty() : 0, limitSell: 0,
+                marketSell: 0, marketBuy: 0, delta: 0, volume: 0
+            });
+        }
+
+        let targetIndex = marketData.findIndex(r => Math.abs(r.price - price) < 0.01);
+        if (targetIndex !== -1) {
+            if (side === 'BUY') {
+                if (action === 'ADD') {
+                    marketData[targetIndex].limitBuy += qty;
+                } else if (action === 'CANCEL') {
+                    marketData[targetIndex].limitBuy = Math.max(0, marketData[targetIndex].limitBuy - qty);
+                }
+            } else {
+                if (action === 'ADD') {
+                    marketData[targetIndex].limitSell += qty;
+                } else if (action === 'CANCEL') {
+                    marketData[targetIndex].limitSell = Math.max(0, marketData[targetIndex].limitSell - qty);
+                }
+            }
+            renderDOM();
+        }
+    }
+
+    // ★ 新增：表格內直接輸入數字的處理函式
     function updateLimitValue(index, field, value) {
         marketData[index][field] = parseInt(value) || 0;
+        renderDOM(); // 讓背景的顏色條可以馬上更新
     }
 
     function renderDOM() {
@@ -1365,13 +1348,9 @@
             let isCurrentPriceRow = (index === currentPriceIndex);
             let rowBgClass = '';
 
-            if (index < currentPriceIndex) {
-                rowBgClass = 'bg-ask-zone';
-            } else if (index > currentPriceIndex) {
-                rowBgClass = 'bg-bid-zone';
-            } else {
-                rowBgClass = 'current-price';
-            }
+            if (index < currentPriceIndex) rowBgClass = 'bg-ask-zone';
+            else if (index > currentPriceIndex) rowBgClass = 'bg-bid-zone';
+            else rowBgClass = 'current-price';
 
             tr.className = rowBgClass;
 
@@ -1406,29 +1385,26 @@
             let priceFormatted = row.price.toFixed(1);
             let priceDisplay = priceFormatted;
 
-            if (isCurrentPriceRow) {
-                priceDisplay = `<span class="current-price-box">${priceFormatted}</span>`;
-            } else if (index === bestAskIndex) {
-                priceDisplay = `<span class="best-ask-box">[ ${priceFormatted} ]</span>`;
-            } else if (index === bestBidIndex) {
-                priceDisplay = `<span class="best-bid-box">[ ${priceFormatted} ]</span>`;
-            }
+            if (isCurrentPriceRow) priceDisplay = `<span class="current-price-box">${priceFormatted}</span>`;
+            else if (index === bestAskIndex) priceDisplay = `<span class="best-ask-box">[ ${priceFormatted} ]</span>`;
+            else if (index === bestBidIndex) priceDisplay = `<span class="best-bid-box">[ ${priceFormatted} ]</span>`;
 
+            // ★ 恢復：限價欄位使用 Input 標籤，讓您可以直接點擊輸入數量
             tr.innerHTML = `
                 <td class="col-limit-buy" style="${buyLimitStyle}">
                     <input type="number" class="cell-input" value="${row.limitBuy || ''}" min="0" onchange="updateLimitValue(${index}, 'limitBuy', this.value)">
                 </td>
                 <td>${row.marketSell || ''}</td>
-                <td>${priceDisplay}</td>
+                <td class="price-click-zone" onclick="document.getElementById('limit-target-price').value = '${priceFormatted}'" title="點擊帶入掛單價格">
+                    ${priceDisplay}
+                </td>
                 <td>${row.marketBuy || ''}</td>
                 <td class="col-limit-sell" style="${sellLimitStyle}">
                     <input type="number" class="cell-input" value="${row.limitSell || ''}" min="0" onchange="updateLimitValue(${index}, 'limitSell', this.value)">
                 </td>
                 <td class="${deltaClass}">${row.delta || ''}</td>
                 <td class="col-volume">
-                    <div class="volume-bar-wrapper" style="${volStyle}">
-                        ${row.volume || ''}
-                    </div>
+                    <div class="volume-bar-wrapper" style="${volStyle}">${row.volume || ''}</div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -1479,14 +1455,12 @@
                 if (i < 0) {
                     let highestPrice = marketData[0].price;
                     marketData.unshift({
-                        price: highestPrice + 0.1,
-                        limitBuy: 0,
+                        price: highestPrice + 0.1, limitBuy: 0,
                         limitSell: isAutoFillEnabled ? getDynamicLimitQty() : 5, 
                         marketSell: 0, marketBuy: 0, delta: 0, volume: 0
                     });
-                    currentPriceIndex++; 
-                    renderAnchorIndex++; 
-                    i = 0; 
+                    currentPriceIndex++; renderAnchorIndex++; i = 0; 
+                    if(activeSpoof) activeSpoof.index++;
                 }
 
                 if (marketData[i].limitSell > 0) {
@@ -1523,10 +1497,8 @@
                 if (i >= marketData.length) {
                     let lowestPrice = marketData[marketData.length - 1].price;
                     marketData.push({
-                        price: lowestPrice - 0.1,
-                        limitBuy: isAutoFillEnabled ? getDynamicLimitQty() : 5,
-                        limitSell: 0,
-                        marketSell: 0, marketBuy: 0, delta: 0, volume: 0
+                        price: lowestPrice - 0.1, limitBuy: isAutoFillEnabled ? getDynamicLimitQty() : 5,
+                        limitSell: 0, marketSell: 0, marketBuy: 0, delta: 0, volume: 0
                     });
                 }
 
@@ -1559,17 +1531,23 @@
             if (globalCVD < targetKLine.cvdLow) targetKLine.cvdLow = globalCVD;
         }
 
-        // ★ 更新 OI 蠟燭的高低點
-        let oiVolatility = Math.floor(totalFilled * (Math.random() * 1.5 - 0.4));
-        globalOI += oiVolatility;
+        let oiChange = 0;
+        let intentRoll = Math.random();
+        if (intentRoll < 0.45) {
+            oiChange = totalFilled;
+        } else if (intentRoll < 0.75) {
+            oiChange = -totalFilled;
+        } else {
+            oiChange = Math.floor(totalFilled * (Math.random() * 0.4 - 0.2)); 
+        }
+
+        globalOI += oiChange;
         if (globalOI < 0) globalOI = 0; 
 
         targetKLine.oiClose = globalOI;
         if (globalOI > targetKLine.oiHigh) targetKLine.oiHigh = globalOI;
         if (globalOI < targetKLine.oiLow) targetKLine.oiLow = globalOI;
         
-        updateDashboard();
-
         let minBigTradeSize = parseInt(document.getElementById('big-trade-filter').value) || 1;
         
         if (totalFilled >= minBigTradeSize) {
@@ -1595,11 +1573,8 @@
     document.addEventListener("DOMContentLoaded", function() {
         if (document.fonts) {
             document.fonts.load('12px "jf-openhuninn-2.1"').then(() => {
-                updateDashboard();
                 renderDOM();
             });
-        } else {
-            updateDashboard();
         }
     });
 
