@@ -359,7 +359,7 @@
         </div>
         
         <div class="control-group">
-            <button id="btn-toggle-auto" class="btn btn-auto-off" onclick="toggleAutoTrading()">⚡ 全局亂數：關閉</button>
+            <button id="btn-toggle-auto" class="btn btn-auto-off" onclick="toggleAutoTrading()">⚡ 自動撮合：關閉</button>
             <select id="select-speed" class="select-speed" onchange="handleSpeedChange()">
                 <option value="500">0.5x 慢速</option>
                 <option value="250" selected>1x 正常</option>
@@ -374,7 +374,7 @@
         <div class="control-group">
             <label class="filter-label" title="只顯示大於此總量的氣泡">
                 🎯 氣泡過濾 &ge;
-                <input type="number" id="big-trade-filter" class="input-qty" value="50" min="1" style="width: 55px; padding: 4px;">
+                <input type="number" id="big-trade-filter" class="input-qty" value="100" min="1" style="width: 55px; padding: 4px;">
             </label>
         </div>
         
@@ -825,7 +825,6 @@
         if (heatmapHistory.length === 0) return;
 
         let colWidth = canvas.width / HEATMAP_COLUMNS;
-        // ★ 熱圖顏色的最高閥值也相應提高
         let maxDepthParam = 350; 
 
         let currentHighestPrice = marketData[Math.max(0, currentPriceIndex - 10)].price;
@@ -1107,7 +1106,6 @@
         tbody.innerHTML = '';
 
         let maxVolume = Math.max(...marketData.map(r => r.volume), 1);
-        // ★ 視覺深度條上限提高到 350，以容納操縱型的極端巨量掛單
         let maxLimitParam = 350;
 
         let bestAskIndex = -1;
