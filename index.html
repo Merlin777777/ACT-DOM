@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (CVD 蠟燭圖版)</title>
+    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (CVD & OI 雙蠟燭圖版)</title>
     <style>
         /* 本地字體對應 */
         @font-face {
@@ -81,7 +81,6 @@
             border: 1px solid #333;
         }
         
-        /* ============== 新增：CVD & OI 數據儀表板 ============== */
         .dashboard-bar {
             display: flex;
             gap: 40px;
@@ -282,8 +281,9 @@
             border-bottom: none;
         }
 
+        /* 視圖加長至 650px，對齊畫布加長 */
         #dom-viewport {
-            height: 532px; 
+            height: 650px; 
             overflow: hidden; 
             position: relative;
             border-bottom: 1px solid #3f3f46;
@@ -389,7 +389,7 @@
 <body>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
-    <div class="team-subtitle">DOM模擬器 (CVD & OI 專業版)</div>
+    <div class="team-subtitle">DOM模擬器 (CVD & OI 雙蠟燭圖版)</div>
 
     <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
 
@@ -456,13 +456,13 @@
         <div class="main-container">
             
             <div class="canvas-container">
-                <div class="canvas-label">動態 K 線 & CVD 蠟燭圖 (5s/根)</div>
-                <canvas id="kline-canvas" width="250" height="580"></canvas>
+                <div class="canvas-label">Price / CVD / OI 蠟燭圖 (5s/根)</div>
+                <canvas id="kline-canvas" width="250" height="700"></canvas>
             </div>
 
             <div class="canvas-container">
                 <div class="canvas-label">DOM 熱圖軌跡</div>
-                <canvas id="heatmap-canvas" width="250" height="580"></canvas>
+                <canvas id="heatmap-canvas" width="250" height="700"></canvas>
             </div>
 
             <div class="dom-master-container">
@@ -492,14 +492,13 @@
     </div>
 
 <script>
-    // --- 核心陣列與索引 ---
     let marketData = [];
     let currentPriceIndex = 40; 
     let renderAnchorIndex = 40; 
     const DOM_SAFE_ZONE = 6;    
     const ROW_HEIGHT = 35;      
 
-    // --- CVD & OI 全局變數 ---
+    // CVD & OI 全局變數
     let globalCVD = 0;
     let globalOI = 245000 + Math.floor(Math.random() * 10000);
 
@@ -528,19 +527,27 @@
     let klineHistory = [];       
     let klineIntervalTimer = null; 
 
-    // ★ K線物件中加入 CVD 的 OHLC (開高低收)
-    let targetKLine = { open: 0, high: 0, low: 0, close: 0, cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0 };
-    let currentKLine = { open: 0, high: 0, low: 0, close: 0, cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0 };
+    // ★ K線物件中加入 CVD 與 OI 的 OHLC (開高低收)
+    let targetKLine = { 
+        open: 0, high: 0, low: 0, close: 0, 
+        cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0,
+        oiOpen: 0, oiHigh: 0, oiLow: 0, oiClose: 0 
+    };
+    let currentKLine = { 
+        open: 0, high: 0, low: 0, close: 0, 
+        cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0,
+        oiOpen: 0, oiHigh: 0, oiLow: 0, oiClose: 0 
+    };
 
     function getHunYuanFont() {
         return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
     }
 
+    // 更新計算以匹配高度 650px 的視圖
     function getBaseTranslateY() {
-        return (532 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
+        return (650 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
     }
 
-    // 儀表板更新函數
     function updateDashboard() {
         const cvdEl = document.getElementById('dash-cvd');
         const oiEl = document.getElementById('dash-oi');
@@ -701,29 +708,38 @@
 
         if(klineIntervalTimer) clearInterval(klineIntervalTimer);
         klineIntervalTimer = setInterval(() => {
-            // 推入歷史 K 線與 CVD 蠟燭
+            // 推入歷史資料
             klineHistory.push({
                 open: targetKLine.open,
                 high: targetKLine.high,
                 low: targetKLine.low,
                 close: targetKLine.close,
+                
                 cvdOpen: targetKLine.cvdOpen,
                 cvdHigh: targetKLine.cvdHigh,
                 cvdLow: targetKLine.cvdLow,
                 cvdClose: targetKLine.cvdClose,
+                
+                oiOpen: targetKLine.oiOpen,
+                oiHigh: targetKLine.oiHigh,
+                oiLow: targetKLine.oiLow,
+                oiClose: targetKLine.oiClose,
+                
                 trades: currentKLineTrades 
             });
             if(klineHistory.length > MAX_KLINES) klineHistory.shift();
 
             currentKLineTrades = []; 
             
-            // 換下一根 K 線，將收盤價傳承為下一根的開盤價
+            // 換線，傳承收盤價
             let currentClose = targetKLine.close;
             let currentCvdClose = targetKLine.cvdClose;
+            let currentOiClose = targetKLine.oiClose;
             
             targetKLine = { 
                 open: currentClose, high: currentClose, low: currentClose, close: currentClose, 
-                cvdOpen: currentCvdClose, cvdHigh: currentCvdClose, cvdLow: currentCvdClose, cvdClose: currentCvdClose 
+                cvdOpen: currentCvdClose, cvdHigh: currentCvdClose, cvdLow: currentCvdClose, cvdClose: currentCvdClose,
+                oiOpen: currentOiClose, oiHigh: currentOiClose, oiLow: currentOiClose, oiClose: currentOiClose
             };
         }, KLINE_INTERVAL);
     }
@@ -813,6 +829,11 @@
         currentKLine.cvdHigh = targetKLine.cvdHigh;
         currentKLine.cvdLow = targetKLine.cvdLow;
 
+        currentKLine.oiOpen = targetKLine.oiOpen;
+        currentKLine.oiClose = targetKLine.oiClose;
+        currentKLine.oiHigh = targetKLine.oiHigh;
+        currentKLine.oiLow = targetKLine.oiLow;
+
         drawKLineCanvas();
         drawHeatmapCanvas();
         requestAnimationFrame(animateAll);
@@ -823,10 +844,14 @@
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        let klineAreaH = 430;
-        let cvdAreaTop = 430;
-        let cvdAreaH = canvas.height - 430; 
+        // ★ 畫布分配：價格 400px, CVD 150px, OI 150px = 總高 700px
+        let klineAreaH = 400;
+        let cvdAreaTop = 400;
+        let cvdAreaH = 150; 
+        let oiAreaTop = 550;
+        let oiAreaH = 150; 
 
+        // ================= 1. 價格 K 線 =================
         let allBars = [...klineHistory, { high: currentKLine.high, low: currentKLine.low }];
         let minP = Infinity, maxP = -Infinity;
         allBars.forEach(b => {
@@ -845,7 +870,6 @@
         let colWidth = canvas.width / (MAX_KLINES + 1.5); 
         let candleWidth = colWidth * 0.6; 
 
-        // 繪製歷史價格 K 線
         klineHistory.forEach((candle, index) => {
             let xCenter = (index + 0.5) * colWidth;
             let yOpen = getDynamicY(candle.open, klineAreaH, allBars);
@@ -868,7 +892,6 @@
             drawBubbles(ctx, candle.trades, xCenter, (p) => getDynamicY(p, klineAreaH, allBars));
         });
 
-        // 繪製當前動態價格 K 線
         let currentXCenter = (klineHistory.length + 0.5) * colWidth;
         let yOpenCurr = getDynamicY(currentKLine.open, klineAreaH, allBars);
         let yCurrentSmooth = getDynamicY(currentKLine.close, klineAreaH, allBars);
@@ -900,7 +923,7 @@
         ctx.font = getHunYuanFont(); 
         ctx.fillText(`現價: ${currentRealPrice.toFixed(1)}`, 60, klineAreaH - 10);
 
-        // ================= CVD 蠟燭圖區塊 =================
+        // ================= 2. CVD 蠟燭圖 =================
         ctx.strokeStyle = '#3f3f46';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, cvdAreaTop); ctx.lineTo(canvas.width, cvdAreaTop); ctx.stroke();
@@ -910,7 +933,6 @@
         ctx.textAlign = 'left';
         ctx.fillText('CVD Candles', 10, cvdAreaTop + 18);
 
-        // 收集所有 CVD 棒子以計算最大/最小範圍
         let allCvdBars = [...klineHistory, { 
             cvdOpen: currentKLine.cvdOpen, cvdHigh: currentKLine.cvdHigh, 
             cvdLow: currentKLine.cvdLow, cvdClose: currentKLine.cvdClose 
@@ -920,7 +942,6 @@
         let maxCVD = Math.max(...allCvdBars.map(b => b.cvdHigh));
         if (maxCVD === minCVD) { maxCVD += 10; minCVD -= 10; }
         
-        // 增加 10% 的緩衝空間讓蠟燭圖不會頂著邊界
         let cvdPadding = (maxCVD - minCVD) * 0.1;
         if (cvdPadding === 0) cvdPadding = 10;
         let cvdMinBound = minCVD - cvdPadding;
@@ -932,7 +953,6 @@
             return cvdAreaTop + 25 + ratio * (cvdAreaH - 35);
         }
 
-        // 繪製 CVD 零軸基準線 (如果 0 在當前可視範圍內)
         if (cvdMinBound <= 0 && cvdMaxBound >= 0) {
             let zeroY = getCvdY(0);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
@@ -946,7 +966,6 @@
             ctx.fillText('0', canvas.width - 5, zeroY - 4);
         }
 
-        // 繪製所有的 CVD 蠟燭圖
         allCvdBars.forEach((candle, index) => {
             let xCenter = (index + 0.5) * colWidth;
             let yOpen = getCvdY(candle.cvdOpen);
@@ -955,23 +974,73 @@
             let yLow = getCvdY(candle.cvdLow);
             
             let isCvdBullish = candle.cvdClose >= candle.cvdOpen;
-            // CVD 上漲為綠色，下跌為紅色
             let cvdColor = isCvdBullish ? '#4ade80' : '#f87171';
 
             ctx.strokeStyle = cvdColor;
             ctx.lineWidth = (index === allCvdBars.length - 1) ? 2.5 : 1.5;
             
-            // 畫上下影線
             ctx.beginPath(); 
             ctx.moveTo(xCenter, yHigh); 
             ctx.lineTo(xCenter, yLow); 
             ctx.stroke();
 
-            // 畫實體柱
             ctx.fillStyle = cvdColor;
             let boxHeight = yClose - yOpen;
-            // 強制實體至少有 1.5px 高度，才不會變成一條線
             if (Math.abs(boxHeight) < 1.5) boxHeight = isCvdBullish ? -1.5 : 1.5; 
+            ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
+        });
+
+        // ================= 3. OI 蠟燭圖 =================
+        ctx.strokeStyle = '#3f3f46';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, oiAreaTop); ctx.lineTo(canvas.width, oiAreaTop); ctx.stroke();
+
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'left';
+        ctx.fillText('OI Candles', 10, oiAreaTop + 18);
+
+        let allOiBars = [...klineHistory, { 
+            oiOpen: currentKLine.oiOpen, oiHigh: currentKLine.oiHigh, 
+            oiLow: currentKLine.oiLow, oiClose: currentKLine.oiClose 
+        }];
+
+        let minOI = Math.min(...allOiBars.map(b => b.oiLow));
+        let maxOI = Math.max(...allOiBars.map(b => b.oiHigh));
+        if (maxOI === minOI) { maxOI += 100; minOI -= 100; }
+
+        let oiPadding = (maxOI - minOI) * 0.1;
+        if (oiPadding === 0) oiPadding = 100;
+        let oiMinBound = minOI - oiPadding;
+        let oiMaxBound = maxOI + oiPadding;
+        let oiRange = oiMaxBound - oiMinBound;
+
+        function getOiY(val) {
+            let ratio = (oiMaxBound - val) / oiRange;
+            return oiAreaTop + 25 + ratio * (oiAreaH - 35);
+        }
+
+        allOiBars.forEach((candle, index) => {
+            let xCenter = (index + 0.5) * colWidth;
+            let yOpen = getOiY(candle.oiOpen);
+            let yClose = getOiY(candle.oiClose);
+            let yHigh = getOiY(candle.oiHigh);
+            let yLow = getOiY(candle.oiLow);
+
+            let isOiBullish = candle.oiClose >= candle.oiOpen;
+            // OI 增加用金黃色，OI 減少平倉用淺藍色，以便與價格及 CVD 區分
+            let oiColor = isOiBullish ? '#fbbf24' : '#60a5fa';
+
+            ctx.strokeStyle = oiColor;
+            ctx.lineWidth = (index === allOiBars.length - 1) ? 2.5 : 1.5;
+
+            ctx.beginPath();
+            ctx.moveTo(xCenter, yHigh);
+            ctx.lineTo(xCenter, yLow);
+            ctx.stroke();
+
+            ctx.fillStyle = oiColor;
+            let boxHeight = yClose - yOpen;
+            if (Math.abs(boxHeight) < 1.5) boxHeight = isOiBullish ? -1.5 : 1.5;
             ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
         });
     }
@@ -1068,8 +1137,16 @@
         });
 
         let initPrice = marketData[currentPriceIndex].price;
-        targetKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice, cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD };
-        currentKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice, cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD };
+        targetKLine = { 
+            open: initPrice, high: initPrice, low: initPrice, close: initPrice, 
+            cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD,
+            oiOpen: globalOI, oiHigh: globalOI, oiLow: globalOI, oiClose: globalOI
+        };
+        currentKLine = { 
+            open: initPrice, high: initPrice, low: initPrice, close: initPrice, 
+            cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD,
+            oiOpen: globalOI, oiHigh: globalOI, oiLow: globalOI, oiClose: globalOI 
+        };
 
         ensurePaddingDepth();
         if (isAutoFillEnabled) autoFillMarketDepth();
@@ -1435,7 +1512,6 @@
                 i--;
             }
             
-            // ★ 更新 CVD 蠟燭的高低點
             globalCVD += totalFilled;
             targetKLine.cvdClose = globalCVD;
             if (globalCVD > targetKLine.cvdHigh) targetKLine.cvdHigh = globalCVD;
@@ -1477,16 +1553,20 @@
                 i++;
             }
             
-            // ★ 更新 CVD 蠟燭的高低點
             globalCVD -= totalFilled;
             targetKLine.cvdClose = globalCVD;
             if (globalCVD > targetKLine.cvdHigh) targetKLine.cvdHigh = globalCVD;
             if (globalCVD < targetKLine.cvdLow) targetKLine.cvdLow = globalCVD;
         }
 
+        // ★ 更新 OI 蠟燭的高低點
         let oiVolatility = Math.floor(totalFilled * (Math.random() * 1.5 - 0.4));
         globalOI += oiVolatility;
         if (globalOI < 0) globalOI = 0; 
+
+        targetKLine.oiClose = globalOI;
+        if (globalOI > targetKLine.oiHigh) targetKLine.oiHigh = globalOI;
+        if (globalOI < targetKLine.oiLow) targetKLine.oiLow = globalOI;
         
         updateDashboard();
 
