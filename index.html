@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (絲滑視角 + 盤口操縱版)</title>
+    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (CVD 蠟燭圖版)</title>
     <style>
         /* 本地字體對應 */
         @font-face {
@@ -73,13 +73,54 @@
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
             justify-content: center;
             width: 100%;
             max-width: 1000px;
             border: 1px solid #333;
         }
+        
+        /* ============== 新增：CVD & OI 數據儀表板 ============== */
+        .dashboard-bar {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            background: linear-gradient(90deg, #18181b, #27272a, #18181b);
+            padding: 10px 30px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.4);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+            border: 1px solid #3f3f46;
+        }
+
+        .stat-box {
+            font-size: 15px;
+            font-weight: bold;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-weight: 900;
+            letter-spacing: 1px;
+            background: #000;
+            padding: 2px 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .text-green { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
+        .text-red { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.4); }
+        .text-gold { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
         
         .control-group {
             display: flex;
@@ -338,6 +379,7 @@
 
         @media (max-width: 800px) {
             .control-panel { padding: 10px; gap: 8px; }
+            .dashboard-bar { gap: 15px; padding: 10px; }
             .btn { padding: 6px 10px; font-size: 12px; }
             .hotkey-tip { display: none; }
             .control-group { border-right: none; }
@@ -347,7 +389,7 @@
 <body>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
-    <div class="team-subtitle">DOM模擬器 (絲滑視角 + 盤口操縱版)</div>
+    <div class="team-subtitle">DOM模擬器 (CVD & OI 專業版)</div>
 
     <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
 
@@ -399,11 +441,22 @@
         </div>
     </div>
 
+    <div class="dashboard-bar">
+        <div class="stat-box">
+            📈 累積買賣力道 (CVD): 
+            <span id="dash-cvd" class="stat-value text-green">+0</span>
+        </div>
+        <div class="stat-box">
+            📜 未平倉量 (OI): 
+            <span id="dash-oi" class="stat-value text-gold">245,000</span>
+        </div>
+    </div>
+
     <div class="responsive-wrapper">
         <div class="main-container">
             
             <div class="canvas-container">
-                <div class="canvas-label">動態 K 線 (5s/根)</div>
+                <div class="canvas-label">動態 K 線 & CVD 蠟燭圖 (5s/根)</div>
                 <canvas id="kline-canvas" width="250" height="580"></canvas>
             </div>
 
@@ -439,11 +492,16 @@
     </div>
 
 <script>
+    // --- 核心陣列與索引 ---
     let marketData = [];
     let currentPriceIndex = 40; 
     let renderAnchorIndex = 40; 
     const DOM_SAFE_ZONE = 6;    
     const ROW_HEIGHT = 35;      
+
+    // --- CVD & OI 全局變數 ---
+    let globalCVD = 0;
+    let globalOI = 245000 + Math.floor(Math.random() * 10000);
 
     let isAutoFillEnabled = true; 
     let isAutoTradingEnabled = false; 
@@ -470,8 +528,9 @@
     let klineHistory = [];       
     let klineIntervalTimer = null; 
 
-    let targetKLine = { open: 0, high: 0, low: 0, close: 0 };
-    let currentKLine = { open: 0, high: 0, low: 0, close: 0 };
+    // ★ K線物件中加入 CVD 的 OHLC (開高低收)
+    let targetKLine = { open: 0, high: 0, low: 0, close: 0, cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0 };
+    let currentKLine = { open: 0, high: 0, low: 0, close: 0, cvdOpen: 0, cvdHigh: 0, cvdLow: 0, cvdClose: 0 };
 
     function getHunYuanFont() {
         return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
@@ -481,37 +540,42 @@
         return (532 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
     }
 
-    // ★ 盤口操縱演算法：非線性巨鯨限價單 (造市防守牆)
-    function getDynamicLimitQty() {
-        let rand = Math.random();
-        if (rand < 0.65) {
-            // 65% 機率：一般散戶/造市鋪單
-            return Math.floor(Math.random() * 70) + 10;
-        } else if (rand < 0.90) {
-            // 25% 機率：中等防守/壓力位
-            return Math.floor(Math.random() * 150) + 80;
-        } else {
-            // 10% 機率：極端盤口操縱假單牆 (250 ~ 750口)
-            return Math.floor(Math.random() * 500) + 250;
-        }
+    // 儀表板更新函數
+    function updateDashboard() {
+        const cvdEl = document.getElementById('dash-cvd');
+        const oiEl = document.getElementById('dash-oi');
+        
+        let cvdPrefix = globalCVD >= 0 ? '+' : '';
+        let cvdStr = cvdPrefix + globalCVD.toLocaleString();
+        cvdEl.innerText = cvdStr;
+        cvdEl.className = globalCVD >= 0 ? 'stat-value text-green' : 'stat-value text-red';
+        
+        oiEl.innerText = globalOI.toLocaleString();
     }
 
-    // 市價單演算法維持極端變化
+    function getDynamicLimitQty() {
+        let rand = Math.random();
+        if (rand < 0.65) return Math.floor(Math.random() * 70) + 10;
+        else if (rand < 0.90) return Math.floor(Math.random() * 150) + 80;
+        else return Math.floor(Math.random() * 500) + 250;
+    }
+
     function getDynamicRandomQty() {
         let rand = Math.random();
-        if (rand < 0.60) {
-            return Math.floor(Math.random() * 51) + 10;
-        } else if (rand < 0.90) {
-            return Math.floor(Math.random() * 141) + 60;
-        } else {
-            return Math.floor(Math.random() * 401) + 200;
-        }
+        if (rand < 0.60) return Math.floor(Math.random() * 51) + 10;
+        else if (rand < 0.90) return Math.floor(Math.random() * 141) + 60;
+        else return Math.floor(Math.random() * 401) + 200;
     }
 
     function resetMarketData() {
         marketData = [];
         currentHeatmapTrades = [];
         currentKLineTrades = [];
+        
+        globalCVD = 0;
+        globalOI = 245000 + Math.floor(Math.random() * 10000);
+        updateDashboard();
+
         let basePrice = 2982.1;
         
         for (let i = 0; i < 81; i++) {
@@ -637,29 +701,39 @@
 
         if(klineIntervalTimer) clearInterval(klineIntervalTimer);
         klineIntervalTimer = setInterval(() => {
+            // 推入歷史 K 線與 CVD 蠟燭
             klineHistory.push({
                 open: targetKLine.open,
                 high: targetKLine.high,
                 low: targetKLine.low,
                 close: targetKLine.close,
+                cvdOpen: targetKLine.cvdOpen,
+                cvdHigh: targetKLine.cvdHigh,
+                cvdLow: targetKLine.cvdLow,
+                cvdClose: targetKLine.cvdClose,
                 trades: currentKLineTrades 
             });
             if(klineHistory.length > MAX_KLINES) klineHistory.shift();
 
             currentKLineTrades = []; 
-
+            
+            // 換下一根 K 線，將收盤價傳承為下一根的開盤價
             let currentClose = targetKLine.close;
-            targetKLine = { open: currentClose, high: currentClose, low: currentClose, close: currentClose };
+            let currentCvdClose = targetKLine.cvdClose;
+            
+            targetKLine = { 
+                open: currentClose, high: currentClose, low: currentClose, close: currentClose, 
+                cvdOpen: currentCvdClose, cvdHigh: currentCvdClose, cvdLow: currentCvdClose, cvdClose: currentCvdClose 
+            };
         }, KLINE_INTERVAL);
     }
 
-    function getDynamicY(price, canvasHeight, allBars) {
+    function getDynamicY(price, klineAreaHeight, allBars) {
         if (allBars.length === 0) {
             let percentage = (2980.6 - price) / (2980.6 - 2979.2);
-            return 35 + percentage * (canvasHeight - 65);
+            return 35 + percentage * (klineAreaHeight - 65);
         }
-        let minP = Infinity;
-        let maxP = -Infinity;
+        let minP = Infinity, maxP = -Infinity;
         allBars.forEach(b => {
             if (b.low < minP) minP = b.low;
             if (b.high > maxP) maxP = b.high;
@@ -672,13 +746,12 @@
         let maxBound = maxP + padding;
 
         let ratio = (price - minBound) / (maxBound - minBound);
-        return (canvasHeight - 40) - (ratio * (canvasHeight - 65));
+        return (klineAreaHeight - 40) - (ratio * (klineAreaHeight - 65));
     }
 
     function drawGridLines(ctx, width, height, isDynamic, minBound, maxBound) {
         ctx.strokeStyle = '#2d2d2d';
         ctx.lineWidth = 1;
-        
         ctx.fillStyle = 'rgba(156, 163, 175, 0.8)'; 
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'right';
@@ -734,6 +807,11 @@
         currentKLine.close = targetKLine.close;
         currentKLine.high = targetKLine.high;
         currentKLine.low = targetKLine.low;
+        
+        currentKLine.cvdOpen = targetKLine.cvdOpen;
+        currentKLine.cvdClose = targetKLine.cvdClose;
+        currentKLine.cvdHigh = targetKLine.cvdHigh;
+        currentKLine.cvdLow = targetKLine.cvdLow;
 
         drawKLineCanvas();
         drawHeatmapCanvas();
@@ -744,6 +822,10 @@
         const canvas = document.getElementById('kline-canvas');
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let klineAreaH = 430;
+        let cvdAreaTop = 430;
+        let cvdAreaH = canvas.height - 430; 
 
         let allBars = [...klineHistory, { high: currentKLine.high, low: currentKLine.low }];
         let minP = Infinity, maxP = -Infinity;
@@ -758,17 +840,18 @@
         let minBound = minP - padding;
         let maxBound = maxP + padding;
 
-        drawGridLines(ctx, canvas.width, canvas.height, true, minBound, maxBound);
+        drawGridLines(ctx, canvas.width, klineAreaH, true, minBound, maxBound);
 
         let colWidth = canvas.width / (MAX_KLINES + 1.5); 
         let candleWidth = colWidth * 0.6; 
 
+        // 繪製歷史價格 K 線
         klineHistory.forEach((candle, index) => {
             let xCenter = (index + 0.5) * colWidth;
-            let yOpen = getDynamicY(candle.open, canvas.height, allBars);
-            let yClose = getDynamicY(candle.close, canvas.height, allBars);
-            let yHigh = getDynamicY(candle.high, canvas.height, allBars);
-            let yLow = getDynamicY(candle.low, canvas.height, allBars);
+            let yOpen = getDynamicY(candle.open, klineAreaH, allBars);
+            let yClose = getDynamicY(candle.close, klineAreaH, allBars);
+            let yHigh = getDynamicY(candle.high, klineAreaH, allBars);
+            let yLow = getDynamicY(candle.low, klineAreaH, allBars);
             
             let isBullish = candle.close >= candle.open;
             let themeColor = isBullish ? '#4ade80' : '#f87171';
@@ -782,14 +865,15 @@
             if (Math.abs(boxHeight) < 1.5) boxHeight = isBullish ? -1.5 : 1.5; 
             ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
 
-            drawBubbles(ctx, candle.trades, xCenter, (p) => getDynamicY(p, canvas.height, allBars));
+            drawBubbles(ctx, candle.trades, xCenter, (p) => getDynamicY(p, klineAreaH, allBars));
         });
 
+        // 繪製當前動態價格 K 線
         let currentXCenter = (klineHistory.length + 0.5) * colWidth;
-        let yOpenCurr = getDynamicY(currentKLine.open, canvas.height, allBars);
-        let yCurrentSmooth = getDynamicY(currentKLine.close, canvas.height, allBars);
-        let yHighCurr = getDynamicY(currentKLine.high, canvas.height, allBars);
-        let yLowCurr = getDynamicY(currentKLine.low, canvas.height, allBars);
+        let yOpenCurr = getDynamicY(currentKLine.open, klineAreaH, allBars);
+        let yCurrentSmooth = getDynamicY(currentKLine.close, klineAreaH, allBars);
+        let yHighCurr = getDynamicY(currentKLine.high, klineAreaH, allBars);
+        let yLowCurr = getDynamicY(currentKLine.low, klineAreaH, allBars);
 
         let isBullishCurr = currentKLine.close >= currentKLine.open;
         let themeColorCurr = isBullishCurr ? '#4ade80' : '#f87171';
@@ -803,7 +887,7 @@
         if (Math.abs(boxHeightCurr) < 2) boxHeightCurr = isBullishCurr ? -2 : 2;
         ctx.fillRect(currentXCenter - (candleWidth / 2), yOpenCurr, candleWidth, boxHeightCurr);
 
-        drawBubbles(ctx, currentKLineTrades, currentXCenter, (p) => getDynamicY(p, canvas.height, allBars));
+        drawBubbles(ctx, currentKLineTrades, currentXCenter, (p) => getDynamicY(p, klineAreaH, allBars));
 
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
         ctx.setLineDash([4, 4]);
@@ -814,7 +898,82 @@
         let currentRealPrice = marketData[currentPriceIndex].price;
         ctx.fillStyle = '#ffffff';
         ctx.font = getHunYuanFont(); 
-        ctx.fillText(`現價: ${currentRealPrice.toFixed(1)}`, 60, canvas.height - 15);
+        ctx.fillText(`現價: ${currentRealPrice.toFixed(1)}`, 60, klineAreaH - 10);
+
+        // ================= CVD 蠟燭圖區塊 =================
+        ctx.strokeStyle = '#3f3f46';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, cvdAreaTop); ctx.lineTo(canvas.width, cvdAreaTop); ctx.stroke();
+
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('CVD Candles', 10, cvdAreaTop + 18);
+
+        // 收集所有 CVD 棒子以計算最大/最小範圍
+        let allCvdBars = [...klineHistory, { 
+            cvdOpen: currentKLine.cvdOpen, cvdHigh: currentKLine.cvdHigh, 
+            cvdLow: currentKLine.cvdLow, cvdClose: currentKLine.cvdClose 
+        }];
+        
+        let minCVD = Math.min(...allCvdBars.map(b => b.cvdLow));
+        let maxCVD = Math.max(...allCvdBars.map(b => b.cvdHigh));
+        if (maxCVD === minCVD) { maxCVD += 10; minCVD -= 10; }
+        
+        // 增加 10% 的緩衝空間讓蠟燭圖不會頂著邊界
+        let cvdPadding = (maxCVD - minCVD) * 0.1;
+        if (cvdPadding === 0) cvdPadding = 10;
+        let cvdMinBound = minCVD - cvdPadding;
+        let cvdMaxBound = maxCVD + cvdPadding;
+        let cvdRange = cvdMaxBound - cvdMinBound;
+
+        function getCvdY(val) {
+            let ratio = (cvdMaxBound - val) / cvdRange;
+            return cvdAreaTop + 25 + ratio * (cvdAreaH - 35);
+        }
+
+        // 繪製 CVD 零軸基準線 (如果 0 在當前可視範圍內)
+        if (cvdMinBound <= 0 && cvdMaxBound >= 0) {
+            let zeroY = getCvdY(0);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.setLineDash([2, 2]);
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(canvas.width, zeroY); ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.textAlign = 'right';
+            ctx.fillText('0', canvas.width - 5, zeroY - 4);
+        }
+
+        // 繪製所有的 CVD 蠟燭圖
+        allCvdBars.forEach((candle, index) => {
+            let xCenter = (index + 0.5) * colWidth;
+            let yOpen = getCvdY(candle.cvdOpen);
+            let yClose = getCvdY(candle.cvdClose);
+            let yHigh = getCvdY(candle.cvdHigh);
+            let yLow = getCvdY(candle.cvdLow);
+            
+            let isCvdBullish = candle.cvdClose >= candle.cvdOpen;
+            // CVD 上漲為綠色，下跌為紅色
+            let cvdColor = isCvdBullish ? '#4ade80' : '#f87171';
+
+            ctx.strokeStyle = cvdColor;
+            ctx.lineWidth = (index === allCvdBars.length - 1) ? 2.5 : 1.5;
+            
+            // 畫上下影線
+            ctx.beginPath(); 
+            ctx.moveTo(xCenter, yHigh); 
+            ctx.lineTo(xCenter, yLow); 
+            ctx.stroke();
+
+            // 畫實體柱
+            ctx.fillStyle = cvdColor;
+            let boxHeight = yClose - yOpen;
+            // 強制實體至少有 1.5px 高度，才不會變成一條線
+            if (Math.abs(boxHeight) < 1.5) boxHeight = isCvdBullish ? -1.5 : 1.5; 
+            ctx.fillRect(xCenter - (candleWidth / 2), yOpen, candleWidth, boxHeight);
+        });
     }
 
     function drawHeatmapCanvas() {
@@ -909,8 +1068,8 @@
         });
 
         let initPrice = marketData[currentPriceIndex].price;
-        targetKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
-        currentKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice };
+        targetKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice, cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD };
+        currentKLine = { open: initPrice, high: initPrice, low: initPrice, close: initPrice, cvdOpen: globalCVD, cvdHigh: globalCVD, cvdLow: globalCVD, cvdClose: globalCVD };
 
         ensurePaddingDepth();
         if (isAutoFillEnabled) autoFillMarketDepth();
@@ -1275,6 +1434,13 @@
                 }
                 i--;
             }
+            
+            // ★ 更新 CVD 蠟燭的高低點
+            globalCVD += totalFilled;
+            targetKLine.cvdClose = globalCVD;
+            if (globalCVD > targetKLine.cvdHigh) targetKLine.cvdHigh = globalCVD;
+            if (globalCVD < targetKLine.cvdLow) targetKLine.cvdLow = globalCVD;
+            
         } else if (type === 'SELL') {
             let i = currentPriceIndex;
             while (qty > 0) {
@@ -1310,7 +1476,19 @@
                 }
                 i++;
             }
+            
+            // ★ 更新 CVD 蠟燭的高低點
+            globalCVD -= totalFilled;
+            targetKLine.cvdClose = globalCVD;
+            if (globalCVD > targetKLine.cvdHigh) targetKLine.cvdHigh = globalCVD;
+            if (globalCVD < targetKLine.cvdLow) targetKLine.cvdLow = globalCVD;
         }
+
+        let oiVolatility = Math.floor(totalFilled * (Math.random() * 1.5 - 0.4));
+        globalOI += oiVolatility;
+        if (globalOI < 0) globalOI = 0; 
+        
+        updateDashboard();
 
         let minBigTradeSize = parseInt(document.getElementById('big-trade-filter').value) || 1;
         
@@ -1337,8 +1515,11 @@
     document.addEventListener("DOMContentLoaded", function() {
         if (document.fonts) {
             document.fonts.load('12px "jf-openhuninn-2.1"').then(() => {
+                updateDashboard();
                 renderDOM();
             });
+        } else {
+            updateDashboard();
         }
     });
 
