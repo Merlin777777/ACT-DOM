@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asia Crazy Team 封神戰隊 - DOM模擬器</title>
+    <title>Asia Crazy Team 封神戰隊 - DOM模擬器 (絲滑動態視角版)</title>
     <style>
         /* 本地字體對應 */
         @font-face {
@@ -221,26 +221,61 @@
             margin-bottom: 5px;
         }
 
+        /* ============== 動態絲滑 DOM 表格全新排版 ============== */
+        .dom-master-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 25px;
+        }
+
         table {
             border-collapse: collapse;
             font-size: 15px; 
             text-align: center;
-            flex-grow: 1;
-            color: #e2e8f0;
-            margin-top: 25px; 
+            width: 100%;
+            table-layout: fixed; /* 強制鎖定欄寬以完美對齊表頭與表身 */
         }
+        
+        .header-table {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        /* 視圖鎖定：高度 532px = 正好顯示約 15 列的空間 */
+        #dom-viewport {
+            height: 532px; 
+            overflow: hidden; 
+            position: relative;
+            border-bottom: 1px solid #3f3f46;
+        }
+
+        #dom-table-body {
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 0;
+            will-change: transform;
+        }
+
         th, td {
-            padding: 10px 8px; 
+            padding: 0 8px; 
             border: 1px solid #3f3f46;
-            min-width: 65px; 
         }
+        
+        /* 強制表身每一列為絕對精準的 35px，這是絲滑動畫計算的基礎 */
+        #dom-table-body tr {
+            height: 35px;
+        }
+
         th {
             background-color: #27272a;
             font-weight: bold;
             white-space: nowrap;
             color: #a1a1aa;
-            padding: 12px 8px;
+            height: 43px;
             font-size: 14px;
+            border-bottom: 2px solid #121212;
         }
         
         .cell-input {
@@ -268,8 +303,7 @@
             font-weight: bold;
             color: #fff;
             text-align: left;
-            padding: 8px 10px !important; 
-            min-width: 100px;
+            padding: 5px 10px !important; 
         }
         
         .volume-bar-wrapper {
@@ -299,6 +333,7 @@
             background-color: #000000;
             color: #fbbf24;
             font-size: 16px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
         }
 
         .best-ask-box { color: #fca5a5; font-weight: bold; font-size: 15px;}
@@ -315,7 +350,7 @@
 <body>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
-    <div class="team-subtitle">DOM模擬器</div>
+    <div class="team-subtitle">DOM模擬器 (絲滑動態視角版)</div>
 
     <div class="disclaimer">本模擬器僅為知識講解，不作為任何投資建議</div>
 
@@ -327,7 +362,7 @@
         </div>
         
         <div class="control-group">
-            <button id="btn-toggle-auto" class="btn btn-auto-off" onclick="toggleAutoTrading()">⚡ 自動撮合：關閉</button>
+            <button id="btn-toggle-auto" class="btn btn-auto-off" onclick="toggleAutoTrading()">⚡ 全局亂數：關閉</button>
             <select id="select-speed" class="select-speed" onchange="handleSpeedChange()">
                 <option value="500">0.5x 慢速</option>
                 <option value="250" selected>1x 正常</option>
@@ -380,27 +415,40 @@
                 <canvas id="heatmap-canvas" width="250" height="580"></canvas>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>限價多</th>
-                        <th>市價空</th>
-                        <th>Price</th>
-                        <th>市價多</th>
-                        <th>限價空</th>
-                        <th>Delta</th>
-                        <th>Volume</th>
-                    </tr>
-                </thead>
-                <tbody id="dom-body">
-                </tbody>
-            </table>
+            <div class="dom-master-container">
+                <table class="header-table">
+                    <colgroup>
+                        <col style="width: 15%;"><col style="width: 10%;"><col style="width: 15%;">
+                        <col style="width: 10%;"><col style="width: 15%;"><col style="width: 12%;"><col style="width: 23%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>限價多</th><th>市價空</th><th>Price</th><th>市價多</th><th>限價空</th><th>Delta</th><th>Volume</th>
+                        </tr>
+                    </thead>
+                </table>
+                <div id="dom-viewport">
+                    <table id="dom-table-body">
+                        <colgroup>
+                            <col style="width: 15%;"><col style="width: 10%;"><col style="width: 15%;">
+                            <col style="width: 10%;"><col style="width: 15%;"><col style="width: 12%;"><col style="width: 23%;">
+                        </colgroup>
+                        <tbody id="dom-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
 <script>
-    let currentPriceIndex = 15; 
+    // --- 核心陣列與索引 ---
     let marketData = [];
+    let currentPriceIndex = 40; 
+    let renderAnchorIndex = 40; // ★ 用於控制視圖置中的錨點
+    const DOM_SAFE_ZONE = 6;    // 價格偏離多少檔位時觸發平滑置中
+    const ROW_HEIGHT = 35;      // 對應 CSS 中 tr 的固定高度
+
     let isAutoFillEnabled = true; 
     let isAutoTradingEnabled = false; 
     let isMuted = false;              
@@ -433,19 +481,40 @@
         return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
     }
 
+    // 計算視窗正確的基礎 Y 偏移量
+    function getBaseTranslateY() {
+        // viewport height = 532, center = 266
+        // render window 顯示前後 30 列 (總共 61 列)，中間那列的索引是 30
+        // 第 30 列的頂部座標 = 30 * 35 = 1050
+        // 第 30 列的中心座標 = 1050 + 17.5 = 1067.5
+        // 為了將 1067.5 對齊到視窗中心 266，Y 需偏移: 266 - 1067.5 = -801.5px
+        return (532 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
+    }
+
     function resetMarketData() {
         marketData = [];
         currentHeatmapTrades = [];
         currentKLineTrades = [];
         let basePrice = 2982.1;
-        for (let i = 0; i < 31; i++) {
+        
+        // 預先生成足夠的上下檔位
+        for (let i = 0; i < 81; i++) {
             marketData.push({
-                price: basePrice - (i * 0.1),
+                price: basePrice + ((40 - i) * 0.1), 
                 limitBuy: 0, limitSell: 0,
                 marketSell: 0, marketBuy: 0, delta: 0, volume: 0      
             });
         }
+        
+        currentPriceIndex = 40;
+        renderAnchorIndex = 40;
         heatmapHistory = []; 
+        ensurePaddingDepth();
+        
+        // 重置物理捲動軸
+        let tableElement = document.getElementById('dom-table-body');
+        tableElement.style.transition = 'none';
+        tableElement.style.transform = `translateY(${getBaseTranslateY()}px)`;
     }
 
     let globalAudioCtx = null;
@@ -500,7 +569,8 @@
     }
 
     function ensurePaddingDepth() {
-        while (currentPriceIndex < 10) {
+        // 增加安全邊界，確保留有充足的渲染預載空間 (30+10=40)
+        while (currentPriceIndex < 40) {
             let highestPrice = marketData[0].price;
             marketData.unshift({
                 price: highestPrice + 0.1,
@@ -509,8 +579,9 @@
                 marketSell: 0, marketBuy: 0, delta: 0, volume: 0
             });
             currentPriceIndex++; 
+            renderAnchorIndex++; // ★ 保持物理座標錨點同步，防止畫面跳動
         }
-        while (currentPriceIndex > marketData.length - 11) {
+        while (currentPriceIndex > marketData.length - 41) {
             let lowestPrice = marketData[marketData.length - 1].price;
             marketData.push({
                 price: lowestPrice - 0.1,
@@ -812,7 +883,6 @@
     }
 
     function randomizeLimitOrders() {
-        currentPriceIndex = 15;
         resetMarketData(); 
         klineHistory = []; 
 
@@ -871,15 +941,15 @@
         }
     }
 
-    // 隨機產生極端市價單分佈
+    // ★ 終極強化版巨鯨分佈 (大幅提升市價單波動度)
     function getDynamicRandomQty() {
         let rand = Math.random();
-        if (rand < 0.70) {
-            return Math.floor(Math.random() * 41) + 10;
-        } else if (rand < 0.95) {
-            return Math.floor(Math.random() * 101) + 50;
+        if (rand < 0.60) {
+            return Math.floor(Math.random() * 51) + 10;   // 60% 機率：一般波動單 (10 ~ 60口)
+        } else if (rand < 0.90) {
+            return Math.floor(Math.random() * 141) + 60;  // 30% 機率：主力掃單 (60 ~ 200口)
         } else {
-            return Math.floor(Math.random() * 301) + 150;
+            return Math.floor(Math.random() * 401) + 200; // 10% 機率：核彈級巨鯨狂暴單 (200 ~ 600口) 
         }
     }
 
@@ -936,7 +1006,6 @@
         if (isAutoSellEnabled) restartDirectionalInterval('SELL');
     }
 
-    // ★ 將自動撮合的普通市價單套用高變化的隨機分佈
     function startAutoInterval() {
         let speed = parseInt(document.getElementById('select-speed').value);
         autoTradingTimer = setInterval(() => {
@@ -946,14 +1015,14 @@
                     if (Math.random() < 0.35) { 
                         currentIceberg.active = true;
                         currentIceberg.side = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                        currentIceberg.remaining = Math.floor(Math.random() * 400) + 200; 
+                        currentIceberg.remaining = Math.floor(Math.random() * 500) + 300; 
                     } else {
                         currentIceberg.active = false;
                     }
                 }
                 if (currentIceberg.active && currentIceberg.remaining > 0) {
                     side = currentIceberg.side;
-                    qty = Math.floor(Math.random() * 40) + 15; 
+                    qty = Math.floor(Math.random() * 80) + 20; 
                     if (qty > currentIceberg.remaining) qty = currentIceberg.remaining;
                     currentIceberg.remaining -= qty;
                     if (Math.random() < 0.15) qty = 0; 
@@ -976,11 +1045,11 @@
 
         if (isAutoTradingEnabled) {
             btn.className = "btn btn-auto-on";
-            btn.innerText = "⚡ 自動撮合：模擬中";
+            btn.innerText = "⚡ 全局亂數：模擬中";
             startAutoInterval();
         } else {
             btn.className = "btn btn-auto-off";
-            btn.innerText = "⚡ 自動撮合：關閉";
+            btn.innerText = "⚡ 全局亂數：關閉";
             clearInterval(autoTradingTimer);
         }
     }
@@ -1030,6 +1099,7 @@
         marketData[index][field] = parseInt(value) || 0;
     }
 
+    // ★ 繪製基於錨點 (renderAnchorIndex) 的動態虛擬視圖
     function renderDOM() {
         const tbody = document.getElementById('dom-body');
         tbody.innerHTML = '';
@@ -1039,25 +1109,22 @@
 
         let bestAskIndex = -1;
         for (let i = currentPriceIndex - 1; i >= 0; i--) {
-            if (marketData[i].limitSell > 0) {
-                bestAskIndex = i;
-                break;
-            }
+            if (marketData[i].limitSell > 0) { bestAskIndex = i; break; }
         }
         
         let bestBidIndex = -1;
         for (let i = currentPriceIndex + 1; i < marketData.length; i++) {
-            if (marketData[i].limitBuy > 0) {
-                bestBidIndex = i;
-                break;
-            }
+            if (marketData[i].limitBuy > 0) { bestBidIndex = i; break; }
         }
 
-        let startIndex = Math.max(0, currentPriceIndex - 10);
-        let endIndex = Math.min(marketData.length - 1, currentPriceIndex + 10);
+        // 以錨點為中心向外展開共 61 列，讓畫面足夠長，掩護捲動效果
+        let startIndex = renderAnchorIndex - 30;
+        let endIndex = renderAnchorIndex + 30;
 
         for (let index = startIndex; index <= endIndex; index++) {
             let row = marketData[index];
+            if (!row) continue;
+
             const tr = document.createElement('tr');
             let isCurrentPriceRow = (index === currentPriceIndex);
             let rowBgClass = '';
@@ -1132,6 +1199,38 @@
         }
     }
 
+    // ★ 物理級動態捲動：當價格觸發安全邊界，進行不閃爍的平滑歸中
+    function checkAndRecenterDOM() {
+        let tickDiff = currentPriceIndex - renderAnchorIndex;
+        
+        if (Math.abs(tickDiff) >= DOM_SAFE_ZONE) {
+            let deltaRows = tickDiff; 
+            renderAnchorIndex = currentPriceIndex; 
+            
+            let tableElement = document.getElementById('dom-table-body');
+            
+            // 讀取當前的 CSS 物理捲動位移
+            const style = window.getComputedStyle(tableElement);
+            const matrix = new DOMMatrixReadOnly(style.transform);
+            const currentY = matrix.m42; 
+            
+            // 完美拼接：視覺位置 + 瞬間新錨點的像素差值
+            let jumpOffsetPx = deltaRows * ROW_HEIGHT;
+            let seamlessY = currentY + jumpOffsetPx;
+            
+            // 瞬間偷換畫面而不產生視覺跳躍
+            tableElement.style.transition = 'none';
+            tableElement.style.transform = `translateY(${seamlessY}px)`;
+            
+            // 強制瀏覽器重繪 (Reflow)
+            void tableElement.offsetHeight;
+            
+            // 放開過渡動畫，緩慢絲滑歸中到基本位階
+            tableElement.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.4, 1)';
+            tableElement.style.transform = `translateY(${getBaseTranslateY()}px)`;
+        }
+    }
+
     function handleMarketOrder(type, customQty = null) {
         playSound(type);
 
@@ -1156,6 +1255,7 @@
                         marketSell: 0, marketBuy: 0, delta: 0, volume: 0
                     });
                     currentPriceIndex++; 
+                    renderAnchorIndex++; // 同步推進錨點防止崩潰
                     i = 0; 
                 }
 
@@ -1236,6 +1336,7 @@
 
         if (isAutoFillEnabled) autoFillMarketDepth();
         renderDOM(); 
+        checkAndRecenterDOM(); // ★ 核心：檢查並觸發絲滑捲動
         recordHeatmapSnapshot(); 
     }
 
