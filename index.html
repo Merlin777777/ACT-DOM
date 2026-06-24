@@ -468,10 +468,10 @@
                 
                 <div id="maker-panel" class="personal-panel-vertical maker-panel-border">
                     <div class="panel-block-vertical panel-block-divider-vertical">
-                        <div style="color: #94a3b8; font-weight: bold; font-size: 15px; margin-bottom: 15px; letter-spacing: 1px;">🛠️ 造市面板 (Maker)</div>
+                        <div style="color: #94a3b8; font-weight: bold; font-size: 15px; margin-bottom: 15px; letter-spacing: 1px;">🛠️ 造市面版 (Maker)</div>
                         
                         <div style="margin-bottom: 10px;">
-                            <span style="color: #cbd5e1; font-weight: bold; background:#334155; padding: 4px 8px; border-radius:4px; font-size:13px;">📜 假單 (Limit)</span>
+                            <span style="color: #cbd5e1; font-weight: bold; background:#334155; padding: 4px 8px; border-radius:4px; font-size:13px;">📜 掛單 (Limit)</span>
                         </div>
                         <select id="limit-side" class="select-speed" style="background-color: #0f172a; border-color: #475569; margin-bottom:10px; width:100%;">
                             <option value="BUY">買單 (Bid)</option>
@@ -486,8 +486,8 @@
                             <input type="number" id="limit-target-qty" class="input-qty" value="100" min="1" style="width: 130px;">
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button id="btn-manual-add" class="btn btn-toggle-on" style="flex:1; background-color: #475569;" onclick="handleManualLimit('ADD')">掛假單 (+)</button>
-                            <button id="btn-manual-cancel" class="btn" style="flex:1; background-color: #334155;" onclick="handleManualLimit('CANCEL')">撤假單 (-)</button>
+                            <button id="btn-manual-add" class="btn btn-toggle-on" style="flex:1; background-color: #475569;" onclick="handleManualLimit('ADD')">掛單 (+)</button>
+                            <button id="btn-manual-cancel" class="btn" style="flex:1; background-color: #334155;" onclick="handleManualLimit('CANCEL')">撤單 (-)</button>
                         </div>
                     </div>
                     
@@ -500,8 +500,8 @@
                             <input type="number" id="maker-qty" class="input-qty" value="150" min="1" style="width: 130px;">
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button id="btn-maker-buy" class="btn btn-buy" style="flex:1; background-color: #059669;" onclick="handleMarketOrder('BUY', document.getElementById('maker-qty').value, false)">市價砸買 (Q)</button>
-                            <button id="btn-maker-sell" class="btn btn-sell" style="flex:1; background-color: #be123c;" onclick="handleMarketOrder('SELL', document.getElementById('maker-qty').value, false)">市價砸賣 (W)</button>
+                            <button id="btn-maker-buy" class="btn btn-buy" style="flex:1; background-color: #059669;" onclick="handleMarketOrder('BUY', document.getElementById('maker-qty').value, false)">市價買 (Q)</button>
+                            <button id="btn-maker-sell" class="btn btn-sell" style="flex:1; background-color: #be123c;" onclick="handleMarketOrder('SELL', document.getElementById('maker-qty').value, false)">市價賣 (W)</button>
                         </div>
                     </div>
                 </div>
