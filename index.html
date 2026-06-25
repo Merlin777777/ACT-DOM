@@ -334,8 +334,31 @@
             box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
         }
 
-        .best-ask-box { color: #fca5a5; font-weight: bold; font-size: 15px;}
-        .best-bid-box { color: #93c5fd; font-weight: bold; font-size: 15px;}
+        /* ★ 新增：最佳 Ask 邊框樣式 */
+        .best-ask-box { 
+            display: inline-block;
+            border: 2px solid #fca5a5; 
+            padding: 3px 8px;
+            border-radius: 3px;
+            background-color: #000000;
+            color: #fca5a5;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(252, 165, 165, 0.3);
+        }
+
+        /* ★ 新增：最佳 Bid 邊框樣式 */
+        .best-bid-box { 
+            display: inline-block;
+            border: 2px solid #93c5fd; 
+            padding: 3px 8px;
+            border-radius: 3px;
+            background-color: #000000;
+            color: #93c5fd;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(147, 197, 253, 0.3);
+        }
 
         .price-click-zone { cursor: pointer; transition: background 0.1s; }
         .price-click-zone:hover { background-color: rgba(255, 255, 255, 0.1); }
@@ -595,7 +618,7 @@
     let myPosition = 0;
     let myAvgPrice = 0;
     let mySL = null;
-    let myTP = null; // ★ 新增止盈變數
+    let myTP = null; 
     let myPersonalLimits = [];
 
     let isAutoFillEnabled = true; 
@@ -636,7 +659,6 @@
         return '11px "jf-openhuninn-2.1", "PingFang TC", sans-serif';
     }
 
-    // 依照新的 viewport 高度 (750) 調整基準 Y 軸
     function getBaseTranslateY() {
         return (750 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
     }
@@ -693,6 +715,7 @@
     }
 
     let globalAudioCtx = null;
+    let lastSoundTime = 0;
 
     function initAudio() {
         if (!globalAudioCtx) {
@@ -706,6 +729,11 @@
 
     function playSound(type) {
         if (isMuted) return; 
+        
+        let now = performance.now();
+        if (now - lastSoundTime < 40) return;
+        lastSoundTime = now;
+
         initAudio();
         if (!globalAudioCtx) return;
 
@@ -1537,8 +1565,19 @@
     window.addEventListener('click', initAudio);
     window.addEventListener('touchstart', initAudio, {passive: true});
 
+    let lastKeyTime = 0;
+    
     window.addEventListener('keydown', function(event) {
         if (event.target.tagName === 'INPUT') return;
+
+        let now = performance.now();
+        if (event.repeat) {
+            if (now - lastKeyTime < 40) {
+                event.preventDefault();
+                return;
+            }
+            lastKeyTime = now;
+        }
 
         const key = event.key.toLowerCase();
         
@@ -1683,7 +1722,7 @@
                 } else if (myPosition === 0) {
                     myAvgPrice = 0;
                     mySL = null; 
-                    myTP = null; // 清除止盈
+                    myTP = null; 
                 }
             } else {
                 let totalVal = (myPosition * myAvgPrice) + (filledQty * execPrice);
@@ -1701,7 +1740,7 @@
                 } else if (myPosition === 0) {
                     myAvgPrice = 0;
                     mySL = null;
-                    myTP = null; // 清除止盈
+                    myTP = null; 
                 }
             } else {
                 let totalVal = (Math.abs(myPosition) * myAvgPrice) + (filledQty * execPrice);
@@ -1712,7 +1751,6 @@
         updatePositionUI();
     }
 
-    // ★ 設定止盈功能
     function setTakeProfit() {
         if (myPosition === 0) return alert('目前無持倉，無法設定止盈！');
         let tp = parseFloat(document.getElementById('personal-tp-input').value);
@@ -1783,7 +1821,6 @@
             posSLEl.style.color = '#94a3b8';
         }
 
-        // 更新止盈顯示
         if (myTP !== null) {
             posTPEl.innerText = myTP.toFixed(1);
             posTPEl.style.color = '#38bdf8';
@@ -1820,7 +1857,6 @@
         }
     }
 
-    // ★ 檢查止盈 (限價反應)
     function checkTakeProfit() {
         if (myPosition === 0 || myTP === null) return;
         let currentRealPrice = marketData[currentPriceIndex].price;
@@ -1829,7 +1865,6 @@
         let closeType = '';
         let closeQty = Math.abs(myPosition);
 
-        // 限價單反應：當現價抵達或穿過 TP 時
         if (myPosition > 0 && currentRealPrice >= myTP) {
             triggered = true;
             closeType = 'SELL';
@@ -1839,12 +1874,12 @@
         }
 
         if (triggered) {
-            let execPrice = myTP; // 保證限價精準成交，無滑價
+            let execPrice = myTP; 
             myTP = null; 
             
             const terminal = document.getElementById('personal-trading-panel');
             terminal.style.transition = 'none';
-            terminal.style.boxShadow = "0 0 30px #38bdf8"; // 青藍色閃爍提示
+            terminal.style.boxShadow = "0 0 30px #38bdf8"; 
             setTimeout(() => {
                 terminal.style.transition = 'box-shadow 0.5s';
                 terminal.style.boxShadow = "0 4px 6px rgba(0,0,0,0.5)";
@@ -1954,27 +1989,31 @@
             let priceFormatted = row.price.toFixed(1);
             let priceDisplay = priceFormatted;
 
+            // ★ 修改：拿掉括號，全部統一換成 box class
             if (isCurrentPriceRow) priceDisplay = `<span class="current-price-box">${priceFormatted}</span>`;
-            else if (index === bestAskIndex) priceDisplay = `<span class="best-ask-box">[ ${priceFormatted} ]</span>`;
-            else if (index === bestBidIndex) priceDisplay = `<span class="best-bid-box">[ ${priceFormatted} ]</span>`;
+            else if (index === bestAskIndex) priceDisplay = `<span class="best-ask-box">${priceFormatted}</span>`;
+            else if (index === bestBidIndex) priceDisplay = `<span class="best-bid-box">${priceFormatted}</span>`;
 
             let posIndicator = '';
-            // 均價標記
             if (myPosition !== 0 && Math.abs(row.price - myAvgPrice) < 0.051) {
                 let color = myPosition > 0 ? '#10b981' : '#ef4444';
-                posIndicator += `<span style="background:${color}; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900; margin-right:4px;">均</span>`;
+                posIndicator += `<span style="background:${color}; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900;">均</span>`;
                 tr.style.boxShadow = `inset 0 0 10px rgba(${myPosition > 0 ? '16,185,129':'239,68,68'}, 0.4)`;
             }
-            // 止損標記
             if (myPosition !== 0 && mySL !== null && Math.abs(row.price - mySL) < 0.051) {
-                posIndicator += `<span style="background:#eab308; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900; margin-right:4px;">損</span>`;
+                posIndicator += `<span style="background:#eab308; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900;">損</span>`;
             }
-            // ★ 止盈標記
             if (myPosition !== 0 && myTP !== null && Math.abs(row.price - myTP) < 0.051) {
-                posIndicator += `<span style="background:#38bdf8; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900; margin-right:4px;">盈</span>`;
+                posIndicator += `<span style="background:#38bdf8; color:black; font-size:11px; padding:1px 4px; border-radius:3px; font-weight:900;">盈</span>`;
             }
             
-            priceDisplay = posIndicator + priceDisplay;
+            // ★ 修改：將內容包在相對定位的 flex 容器，確保絕對置中且標籤浮動在左邊
+            priceDisplay = `
+                <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                    <div style="position: absolute; left: 2px; display: flex; gap: 3px;">${posIndicator}</div>
+                    ${priceDisplay}
+                </div>
+            `;
 
             let isBidSide = index > currentPriceIndex;
             let qtyToPass = isBidSide ? (row.limitBuy || 0) : (row.limitSell || 0);
@@ -2180,8 +2219,8 @@
         recordHeatmapSnapshot(); 
 
         checkPersonalLimits();
-        checkTakeProfit(); // ★ 觸發止盈檢查
-        checkStopLoss();   // 觸發止損檢查
+        checkTakeProfit();
+        checkStopLoss();   
     }
 
     document.addEventListener("DOMContentLoaded", function() {
