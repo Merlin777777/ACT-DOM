@@ -25,10 +25,12 @@
         body {
             background-color: #121212;
             color: #e0e0e0;
-            padding: 10px;
+            /* 增加上方的 padding，從原本的 10px 改為 50px，解決太靠上的問題 */
+            padding: 50px 10px 40px 10px; 
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
             margin: 0;
             overflow-x: hidden;
         }
@@ -60,13 +62,13 @@
             color: #f87171;
             padding: 5px 15px;
             font-size: 12px;
-            margin-bottom: 15px;
+            margin-bottom: 25px; /* 稍微增加與主面板的距離 */
             border-radius: 4px;
             text-align: center;
             border: 1px solid #444;
         }
 
-        /* 調整過後的控制面板 (符合 DOM 欄位寬度) */
+        /* 控制面板 (符合 DOM 欄位寬度) */
         .control-panel {
             display: flex;
             gap: 8px;
@@ -196,12 +198,14 @@
             border-radius: 8px;
             background: #1a1a1a;
             border: 1px solid #333;
+            margin: 0 auto;
         }
 
         .main-container {
             display: flex;
             gap: 20px;
             align-items: flex-start;
+            justify-content: center; /* 確保超大螢幕時三個欄位也能置中對齊 */
             padding: 15px;
             min-width: 1300px; 
         }
@@ -256,7 +260,6 @@
             border-bottom: none;
         }
 
-        /* 將高度縮小至 650px 讓下方塞得下控制區 */
         #dom-viewport {
             height: 650px; 
             overflow: hidden; 
@@ -702,7 +705,6 @@
         oiOpen: 0, oiHigh: 0, oiLow: 0, oiClose: 0 
     };
 
-    // ★ 變更：配合 viewport 縮小到 650px 的起始位移計算
     function getBaseTranslateY() {
         return (650 / 2) - (30 * ROW_HEIGHT + (ROW_HEIGHT / 2));
     }
