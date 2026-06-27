@@ -32,16 +32,25 @@
             overflow-x: hidden;
         }
 
-        /* 動畫開場封面 */
+        /* ==========================================
+           開場影片覆蓋層 (Intro Video Screen)
+        ========================================== */
         #intro-screen {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: url('intro.png');
-            background-size: cover;
-            background-position: center;
+            background-color: #000;
             z-index: 99999;
             cursor: pointer; 
             transition: opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #intro-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 滿版覆蓋 */
         }
         
         #intro-screen.fade-out { opacity: 0; transform: scale(1.08); pointer-events: none; }
@@ -142,8 +151,13 @@
 </head>
 <body>
 
-    <!-- ★ 開場動畫封面 (全版面點擊，無縫融入圖片上的按鈕) -->
-    <div id="intro-screen" onclick="enterApp()"></div>
+    <!-- ★ 加入 preload="auto" 與 oncanplay 防呆機制 -->
+    <div id="intro-screen" onclick="enterApp()">
+        <video id="intro-video" autoplay muted playsinline preload="auto" oncanplay="this.play()">
+            <source src="intro.mp4" type="video/mp4">
+            您的瀏覽器不支援影片標籤。
+        </video>
+    </div>
 
     <div class="team-title">Asia Crazy Team 封神戰隊</div>
     <div class="team-subtitle">DOM模擬器</div>
@@ -295,8 +309,9 @@
                             <button class="btn btn-sell" style="flex:1;" onclick="placePersonalLimit('SELL')">限價賣出</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1;" onclick="handleMarketOrder('BUY', null, true)">市價買 (B)</button>
-                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1;" onclick="handleMarketOrder('SELL', null, true)">市價賣 (S)</button>
+                            <!-- ★ 實盤市價買賣：帶入強制播放 tp 音效 -->
+                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1;" onclick="handleMarketOrder('BUY', null, true, false, 'tp')">市價買 (B)</button>
+                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1;" onclick="handleMarketOrder('SELL', null, true, false, 'tp')">市價賣 (S)</button>
                         </div>
                     </div>
 
@@ -352,6 +367,8 @@
     function enterApp() {
         initAudio(); 
         const intro = document.getElementById('intro-screen');
+        const vid = document.getElementById('intro-video');
+        if (vid) vid.pause();
         intro.classList.add('fade-out');
         setTimeout(() => { intro.style.display = 'none'; }, 1200);
     }
@@ -412,22 +429,21 @@
         let tableElement = document.getElementById('dom-table-body'); tableElement.style.transition = 'none'; tableElement.style.transform = `translateY(${getBaseTranslateY()}px)`;
     }
 
-    // ★ 本地音效系統
+    // ★ 更新：新增 tp.mp3 音效
     let globalVolume = 0.5;
     let isMuted = false;
     const preloadedSounds = {};
     const audioFiles = {
         buy: 'buy.mp3',
         sell: 'sell.mp3',
-        buy_sl: 'buy_sl.mp3',      // 多單止損(賣出)
-        sell_sl: 'sell_sl.mp3',    // 空單止損(買入)
+        buy_sl: 'buy_sl.mp3',      
+        sell_sl: 'sell_sl.mp3',    
         order_placed: 'female_order placed.wav',
-        order_filled: 'female_order filled.wav',
-        order_canceled: 'female_order canceled.wav'
+        order_canceled: 'female_order canceled.wav',
+        tp: 'tp.mp3'  // ★ 新增獨立的限價/市價實盤成交音效
     };
 
     function initAudio() {
-        // 預加載音效避免延遲
         for (let key in audioFiles) {
             preloadedSounds[key] = new Audio(audioFiles[key]);
             preloadedSounds[key].load();
@@ -446,7 +462,7 @@
     function updateVolume() {
         globalVolume = parseFloat(document.getElementById('volume-slider').value);
         if (globalVolume > 0 && isMuted) {
-            toggleMute(); // 拖曳音量時自動解除靜音
+            toggleMute(); 
         }
     }
 
@@ -622,7 +638,6 @@
             ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textLimit, 83, yLimit - 3);
         });
 
-        // ★ 加上持倉數量
         if (myPosition !== 0) {
             if (myAvgPrice > 0) {
                 let yAvg = getDynamicY(myAvgPrice, klineAreaH, allBars); ctx.strokeStyle = myPosition > 0 ? '#10b981' : '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
@@ -701,7 +716,6 @@
 
         let yCurrentSmoothFixed = getY(currentKLine.close); let currentRealPrice = marketData[currentPriceIndex].price;
         
-        // ★ 加上持倉數量
         if (myPosition !== 0) {
             if (myAvgPrice > 0) {
                 let yAvg = getY(myAvgPrice); ctx.strokeStyle = myPosition > 0 ? '#10b981' : '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(0, yAvg); ctx.lineTo(canvas.width - 50, yAvg); ctx.stroke(); ctx.setLineDash([]);
@@ -779,7 +793,13 @@
         if (event.target.tagName === 'INPUT') return;
         let now = performance.now(); if (event.repeat) { if (now - lastKeyTime < 40) { event.preventDefault(); return; } lastKeyTime = now; }
         const key = event.key.toLowerCase();
-        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true); flashButton('btn-buy-panel'); } else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true); flashButton('btn-sell-panel'); } else if (key === 'q') { event.preventDefault(); handleMarketOrder('BUY', document.getElementById('maker-qty').value, false); flashButton('btn-maker-buy'); } else if (key === 'w') { event.preventDefault(); handleMarketOrder('SELL', document.getElementById('maker-qty').value, false); flashButton('btn-maker-sell'); } else if (key === '+' || key === '=') { event.preventDefault(); handleManualLimit('ADD'); flashButton('btn-manual-add'); } else if (key === '-' || key === '_') { event.preventDefault(); handleManualLimit('CANCEL'); flashButton('btn-manual-cancel'); }
+        // ★ 熱鍵實盤市價買賣：加上 tp 音效
+        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'tp'); flashButton('btn-buy-panel'); } 
+        else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'tp'); flashButton('btn-sell-panel'); } 
+        else if (key === 'q') { event.preventDefault(); handleMarketOrder('BUY', document.getElementById('maker-qty').value, false); flashButton('btn-maker-buy'); } 
+        else if (key === 'w') { event.preventDefault(); handleMarketOrder('SELL', document.getElementById('maker-qty').value, false); flashButton('btn-maker-sell'); } 
+        else if (key === '+' || key === '=') { event.preventDefault(); handleManualLimit('ADD'); flashButton('btn-manual-add'); } 
+        else if (key === '-' || key === '_') { event.preventDefault(); handleManualLimit('CANCEL'); flashButton('btn-manual-cancel'); }
     });
 
     function flashButton(id) { const btn = document.getElementById(id); if(btn) { btn.style.transform = 'translateY(2px)'; setTimeout(() => btn.style.transform = 'none', 100); } }
@@ -859,7 +879,7 @@
             else marketData[targetIndex].personalSell += qty;
         }
         myPersonalLimits.push({ id: Date.now() + Math.random(), side: side, price: price, qty: qty, initialQty: qty, isTP: isTP });
-        playSound('order_placed'); // 播放限價掛單音效
+        playSound('order_placed');
         renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
     }
 
@@ -874,7 +894,7 @@
             }
             if (order.isTP && !isReplacing) myTP = null;
             myPersonalLimits.splice(orderIndex, 1);
-            if (!isReplacing) playSound('order_canceled'); // 播放撤單音效
+            if (!isReplacing) playSound('order_canceled'); 
         }
         renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas(); 
     }
@@ -930,7 +950,6 @@
         mySL = sl; updatePositionUI(); renderDOM();
     }
 
-    // ★ 手動平倉 (帶入 isClosing = true 確保 OI 扣減)
     function closeAllPosition() { 
         if (myPosition === 0) return; 
         let tpOrder = myPersonalLimits.find(o => o.isTP);
@@ -959,7 +978,6 @@
         if (myTP !== null) { posTPEl.innerText = myTP.toFixed(1); posTPEl.style.color = '#38bdf8'; } else { posTPEl.innerText = '未設定'; posTPEl.style.color = '#94a3b8'; }
     }
 
-    // ★ 檢查止損 (帶入 isClosing = true 確保 OI 扣減，並發送專屬音效)
     function checkStopLoss() {
         if (myPosition === 0 || mySL === null) return;
         let currentRealPrice = marketData[currentPriceIndex].price; let triggered = false; let closeType = ''; let closeQty = Math.abs(myPosition);
@@ -998,8 +1016,6 @@
             let displayLimitSell = row.limitSell + (row.personalSell || 0);
 
             let buyLimitPercentage = (displayLimitBuy / maxLimitParam) * 100; let buyLimitStyle = displayLimitBuy > 0 ? `background: linear-gradient(to left, rgba(0, 100, 255, 0.4) ${buyLimitPercentage}%, rgba(0, 21, 148, 0.8) ${buyLimitPercentage}%);` : 'background-color: transparent;';
-            
-            // ★ 修改賣單背景為較偏白/淡紅，提升文字辨識度
             let sellLimitPercentage = (displayLimitSell / maxLimitParam) * 100; let sellLimitStyle = displayLimitSell > 0 ? `background: linear-gradient(to right, rgba(252, 165, 165, 0.5) ${sellLimitPercentage}%, rgba(220, 53, 69, 0.7) ${sellLimitPercentage}%);` : 'background-color: transparent;';
             let volPercentage = (row.volume / maxVolume) * 100; let isVolumeLeader = (row.volume > 0 && row.volume === maxVolume); let volStyle = row.volume > 0 ? `background: linear-gradient(to right, ${isVolumeLeader ? 'rgba(252,165,165,0.8)' : 'rgba(100,116,139,0.8)'} ${volPercentage}%, transparent ${volPercentage}%);` : '';
 
@@ -1038,7 +1054,6 @@
             tbody.appendChild(tr);
         }
         
-        // ★ 確保每次渲染 DOM 深度時，實盤持倉現價也能同步跳動
         document.getElementById('pos-current').innerText = marketData[currentPriceIndex].price.toFixed(1);
         updatePositionUI(); 
     }
@@ -1056,14 +1071,12 @@
         }
     }
 
-    // ★ 處理核心掛單/吃單 (新增 isClosing 參數判斷是否要減少 OI)
     function handleMarketOrder(type, customQty = null, isPersonal = false, isClosing = false, soundOverride = null) {
         let qty = customQty !== null ? parseInt(customQty) : (document.getElementById('personal-qty') ? parseInt(document.getElementById('personal-qty').value) : 50);
         if (isNaN(qty) || qty <= 0) return; 
         
-        // 播放對應音效
         if (soundOverride) playSound(soundOverride);
-        else playSound(type.toLowerCase()); // 播放 'buy' 或 'sell'
+        else playSound(type.toLowerCase()); 
 
         let totalCost = 0; let totalFilled = 0;
 
@@ -1106,9 +1119,11 @@
                         myOrder.qty -= orderFill;
                         remainingPersonalFilled -= orderFill;
                         updateMyPosition('SELL', orderFill, myOrder.price);
-                        if (myOrder.isTP && myOrder.qty === 0) {
-                            myTP = null;
-                            playSound('order_filled'); // 播放止盈成交音效
+                        
+                        // ★ 當實盤委託被完全成交時，播放 tp.mp3
+                        if (myOrder.qty === 0) {
+                            if (myOrder.isTP) myTP = null;
+                            playSound('tp'); 
                         }
                     }
                     myPersonalLimits = myPersonalLimits.filter(o => o.qty > 0);
@@ -1165,9 +1180,11 @@
                         myOrder.qty -= orderFill;
                         remainingPersonalFilled -= orderFill;
                         updateMyPosition('BUY', orderFill, myOrder.price);
-                        if (myOrder.isTP && myOrder.qty === 0) {
-                            myTP = null;
-                            playSound('order_filled'); // 播放止盈成交音效
+                        
+                        // ★ 當實盤委託被完全成交時，播放 tp.mp3
+                        if (myOrder.qty === 0) {
+                            if (myOrder.isTP) myTP = null;
+                            playSound('tp'); 
                         }
                     }
                     myPersonalLimits = myPersonalLimits.filter(o => o.qty > 0);
@@ -1187,12 +1204,9 @@
             targetKLine.cvdClose = globalCVD; if (globalCVD > targetKLine.cvdHigh) targetKLine.cvdHigh = globalCVD; if (globalCVD < targetKLine.cvdLow) targetKLine.cvdLow = globalCVD;
         }
 
-        // ★ OI 處理邏輯
         if (isClosing) {
-            // 如果是平倉或觸發止損，未平倉量強制下降
             globalOI = Math.max(0, globalOI - totalFilled);
         } else {
-            // 一般開倉或自然市場交易
             let isBreakout = totalFilled > 300; let oiChange = 0; let intentRoll = Math.random();
             if (isBreakout) oiChange = intentRoll < 0.55 ? Math.floor(totalFilled * (Math.random() * 0.4 + 0.6)) : -Math.floor(totalFilled * (Math.random() * 0.4 + 0.4));
             else oiChange = intentRoll < 0.40 ? Math.floor(totalFilled * 0.3) : (intentRoll < 0.70 ? -Math.floor(totalFilled * 0.3) : Math.floor(totalFilled * (Math.random() * 0.2 - 0.1)));
@@ -1211,7 +1225,14 @@
         renderDOM(); checkAndRecenterDOM(); recordHeatmapSnapshot(); checkStopLoss();   
     }
 
-    document.addEventListener("DOMContentLoaded", function() { if (document.fonts) document.fonts.load('12px "jf-openhuninn-2.1"').then(() => { renderDOM(); }); });
+    // ★ 新增一個 DOMContentLoaded 機制，強制影片觸發播放
+    document.addEventListener("DOMContentLoaded", function() { 
+        let vid = document.getElementById("intro-video");
+        if(vid) vid.play().catch(e => console.log("等待互動才能播放音效:", e));
+        
+        if (document.fonts) document.fonts.load('12px "jf-openhuninn-2.1"').then(() => { renderDOM(); }); 
+    });
+    
     randomizeLimitOrders(); animateAll();       
 </script>
 </body>
