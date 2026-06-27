@@ -50,7 +50,8 @@
         #intro-video {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* 滿版覆蓋 */
+            object-fit: cover; 
+            pointer-events: none; /* 確保點擊事件能穿透給父層 */
         }
         
         #intro-screen.fade-out { opacity: 0; transform: scale(1.08); pointer-events: none; }
@@ -151,9 +152,8 @@
 </head>
 <body>
 
-    <!-- ★ 加入 preload="auto" 與 oncanplay 防呆機制 -->
     <div id="intro-screen" onclick="enterApp()">
-        <video id="intro-video" autoplay muted playsinline preload="auto" oncanplay="this.play()">
+        <video id="intro-video" autoplay muted playsinline preload="auto">
             <source src="intro.mp4" type="video/mp4">
             您的瀏覽器不支援影片標籤。
         </video>
@@ -309,7 +309,6 @@
                             <button class="btn btn-sell" style="flex:1;" onclick="placePersonalLimit('SELL')">限價賣出</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <!-- ★ 實盤市價買賣：帶入強制播放 tp 音效 -->
                             <button id="btn-buy-panel" class="btn btn-buy" style="flex:1;" onclick="handleMarketOrder('BUY', null, true, false, 'tp')">市價買 (B)</button>
                             <button id="btn-sell-panel" class="btn btn-sell" style="flex:1;" onclick="handleMarketOrder('SELL', null, true, false, 'tp')">市價賣 (S)</button>
                         </div>
@@ -352,8 +351,15 @@
                         </div>
                     </div>
 
+                    <!-- ★ 更新：將標題與英文換行，並縮小英文，避免擠壓按鈕 -->
                     <div class="panel-block-vertical" style="flex: 1; min-height: 120px;">
-                        <div style="color: #93c5fd; font-weight: bold; font-size: 15px; margin-bottom: 10px; letter-spacing: 1px; text-shadow: 0 1px 3px black;">⏳ 當前委託 (Active Limits)</div>
+                        <div style="color: #93c5fd; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; text-shadow: 0 1px 3px black;">
+                            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                                <span>⏳ 當前委託</span>
+                                <span style="font-size: 12px; font-weight: normal; color: #bfdbfe;">(Active Limits)</span>
+                            </div>
+                            <button class="btn" style="background:rgba(63, 63, 70, 0.7); border: 1px solid #52525b; padding: 3px 8px; font-size:12px; white-space: nowrap; flex-shrink: 0;" onclick="cancelAllPersonalLimits()">一鍵清除</button>
+                        </div>
                         <div id="personal-limits-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; border: 1px solid rgba(251,191,36,0.15);">
                         </div>
                     </div>
@@ -429,7 +435,6 @@
         let tableElement = document.getElementById('dom-table-body'); tableElement.style.transition = 'none'; tableElement.style.transform = `translateY(${getBaseTranslateY()}px)`;
     }
 
-    // ★ 更新：新增 tp.mp3 音效
     let globalVolume = 0.5;
     let isMuted = false;
     const preloadedSounds = {};
@@ -440,7 +445,7 @@
         sell_sl: 'sell_sl.mp3',    
         order_placed: 'female_order placed.wav',
         order_canceled: 'female_order canceled.wav',
-        tp: 'tp.mp3'  // ★ 新增獨立的限價/市價實盤成交音效
+        tp: 'tp.mp3'  
     };
 
     function initAudio() {
@@ -455,7 +460,7 @@
         if (preloadedSounds[type]) {
             let sound = preloadedSounds[type].cloneNode();
             sound.volume = globalVolume;
-            sound.play().catch(e => console.log("音效播放被阻擋或尚未載入:", e));
+            sound.play().catch(e => console.log("音效播放被阻擋:", e));
         }
     }
 
@@ -793,7 +798,6 @@
         if (event.target.tagName === 'INPUT') return;
         let now = performance.now(); if (event.repeat) { if (now - lastKeyTime < 40) { event.preventDefault(); return; } lastKeyTime = now; }
         const key = event.key.toLowerCase();
-        // ★ 熱鍵實盤市價買賣：加上 tp 音效
         if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'tp'); flashButton('btn-buy-panel'); } 
         else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'tp'); flashButton('btn-sell-panel'); } 
         else if (key === 'q') { event.preventDefault(); handleMarketOrder('BUY', document.getElementById('maker-qty').value, false); flashButton('btn-maker-buy'); } 
@@ -836,7 +840,24 @@
         tableElement.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.4, 1)'; tableElement.style.transform = `translateY(${getBaseTranslateY()}px)`;
     }
 
-    function handlePriceClick(price, isBidSide, currentQty) {
+    function handlePriceClick(e, price, isBidSide, currentQty) {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            document.getElementById('personal-tp-input').value = price.toFixed(1);
+            let inputEl = document.getElementById('personal-tp-input');
+            inputEl.style.transition = 'none'; inputEl.style.boxShadow = "0 0 15px #38bdf8";
+            setTimeout(() => { inputEl.style.transition = 'box-shadow 0.5s'; inputEl.style.boxShadow = "none"; }, 300);
+            return;
+        }
+        if (e.altKey) {
+            e.preventDefault();
+            document.getElementById('personal-sl-input').value = price.toFixed(1);
+            let inputEl = document.getElementById('personal-sl-input');
+            inputEl.style.transition = 'none'; inputEl.style.boxShadow = "0 0 15px #fca5a5";
+            setTimeout(() => { inputEl.style.transition = 'box-shadow 0.5s'; inputEl.style.boxShadow = "none"; }, 300);
+            return;
+        }
+
         document.getElementById('limit-target-price').value = price.toFixed(1); document.getElementById('limit-side').value = isBidSide ? 'BUY' : 'SELL';
         if (currentQty > 0) document.getElementById('limit-target-qty').value = currentQty; else document.getElementById('limit-target-qty').value = 50; 
         document.getElementById('personal-price').value = price.toFixed(1);
@@ -883,7 +904,7 @@
         renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
     }
 
-    function cancelPersonalLimit(id, isReplacing=false) { 
+    function cancelPersonalLimit(id, isBatch=false) { 
         let orderIndex = myPersonalLimits.findIndex(o => o.id === id);
         if (orderIndex !== -1) {
             let order = myPersonalLimits[orderIndex];
@@ -892,11 +913,21 @@
                 if (order.side === 'BUY') marketData[targetIndex].personalBuy = Math.max(0, marketData[targetIndex].personalBuy - order.qty);
                 else marketData[targetIndex].personalSell = Math.max(0, marketData[targetIndex].personalSell - order.qty);
             }
-            if (order.isTP && !isReplacing) myTP = null;
+            if (order.isTP) myTP = null;
             myPersonalLimits.splice(orderIndex, 1);
-            if (!isReplacing) playSound('order_canceled'); 
+            if (!isBatch) { 
+                playSound('order_canceled'); 
+                renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas(); 
+            }
         }
-        renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas(); 
+    }
+
+    function cancelAllPersonalLimits() {
+        if (myPersonalLimits.length === 0) return;
+        let ids = myPersonalLimits.map(o => o.id);
+        ids.forEach(id => cancelPersonalLimit(id, true)); 
+        playSound('order_canceled');
+        renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
     }
 
     function renderPersonalLimits() {
@@ -1045,7 +1076,7 @@
             tr.innerHTML = `
                 <td class="col-limit-buy" style="${buyLimitStyle}"><input type="number" class="cell-input" value="${displayLimitBuy || ''}" min="0" onchange="updateLimitValue(${index}, 'limitBuy', this.value)"></td>
                 <td>${row.marketSell || ''}</td>
-                <td class="price-click-zone" onclick="handlePriceClick(${row.price}, ${isBidSide}, ${qtyToPass})" title="點擊帶入價格">${priceDisplay}</td>
+                <td class="price-click-zone" onclick="handlePriceClick(event, ${row.price}, ${isBidSide}, ${qtyToPass})" title="點擊帶入價格 | Ctrl+左鍵設止盈 | Alt+左鍵設止損">${priceDisplay}</td>
                 <td>${row.marketBuy || ''}</td>
                 <td class="col-limit-sell" style="${sellLimitStyle}"><input type="number" class="cell-input" value="${displayLimitSell || ''}" min="0" onchange="updateLimitValue(${index}, 'limitSell', this.value)"></td>
                 <td class="${deltaClass}">${row.delta || ''}</td>
@@ -1120,7 +1151,6 @@
                         remainingPersonalFilled -= orderFill;
                         updateMyPosition('SELL', orderFill, myOrder.price);
                         
-                        // ★ 當實盤委託被完全成交時，播放 tp.mp3
                         if (myOrder.qty === 0) {
                             if (myOrder.isTP) myTP = null;
                             playSound('tp'); 
@@ -1181,7 +1211,6 @@
                         remainingPersonalFilled -= orderFill;
                         updateMyPosition('BUY', orderFill, myOrder.price);
                         
-                        // ★ 當實盤委託被完全成交時，播放 tp.mp3
                         if (myOrder.qty === 0) {
                             if (myOrder.isTP) myTP = null;
                             playSound('tp'); 
@@ -1206,6 +1235,8 @@
 
         if (isClosing) {
             globalOI = Math.max(0, globalOI - totalFilled);
+        } else if (isPersonal) {
+            globalOI += totalFilled; 
         } else {
             let isBreakout = totalFilled > 300; let oiChange = 0; let intentRoll = Math.random();
             if (isBreakout) oiChange = intentRoll < 0.55 ? Math.floor(totalFilled * (Math.random() * 0.4 + 0.6)) : -Math.floor(totalFilled * (Math.random() * 0.4 + 0.4));
@@ -1225,10 +1256,16 @@
         renderDOM(); checkAndRecenterDOM(); recordHeatmapSnapshot(); checkStopLoss();   
     }
 
-    // ★ 新增一個 DOMContentLoaded 機制，強制影片觸發播放
     document.addEventListener("DOMContentLoaded", function() { 
         let vid = document.getElementById("intro-video");
-        if(vid) vid.play().catch(e => console.log("等待互動才能播放音效:", e));
+        if(vid) {
+            vid.muted = true;
+            vid.play().catch(e => {
+                console.log("被瀏覽器阻擋自動播放，等待互動:", e);
+                document.body.addEventListener('click', () => vid.play(), { once: true });
+                document.body.addEventListener('touchstart', () => vid.play(), { once: true });
+            });
+        }
         
         if (document.fonts) document.fonts.load('12px "jf-openhuninn-2.1"').then(() => { renderDOM(); }); 
     });
