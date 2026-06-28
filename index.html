@@ -51,7 +51,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover; 
-            pointer-events: none; /* 確保點擊事件能穿透給父層 */
+            pointer-events: none; 
         }
         
         #intro-screen.fade-out { opacity: 0; transform: scale(1.08); pointer-events: none; }
@@ -137,7 +137,7 @@
         .price-click-zone { cursor: pointer; transition: background 0.1s; text-shadow: 0 1px 3px black; }
         .price-click-zone:hover { background-color: rgba(251, 191, 36, 0.2); }
 
-        .right-sidebar { display: flex; flex-direction: column; gap: 15px; width: 290px; flex-shrink: 0; margin-top: 25px; }
+        .right-sidebar { display: flex; flex-direction: column; gap: 15px; width: 300px; flex-shrink: 0; margin-top: 25px; }
         
         .personal-panel-vertical { background-color: rgba(10, 10, 10, 0.2); backdrop-filter: blur(6px); border: 1px solid rgba(251, 191, 36, 0.3); display: flex; flex-direction: column; gap: 15px; padding: 15px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); transition: box-shadow 0.3s ease; }
         .maker-panel-border { border-color: rgba(217, 119, 6, 0.5); }
@@ -242,7 +242,7 @@
                 </div>
 
                 <div class="hotkey-tip">
-                    💡 <b>快捷鍵：</b> [實盤: <span style="color:#4ade80;">B買/S賣</span>] | [砸盤: <span style="color:#fca5a5;">Q買/W賣</span>] | [掛單: <span style="color:#fde047;">+/ -</span>] | 圖表與DOM皆可滾動與拖曳
+                    💡 <b>快捷鍵：</b> [實盤: <span style="color:#4ade80;">B做多/S做空</span>] | [砸盤: <span style="color:#fca5a5;">Q買/W賣</span>] | [掛單: <span style="color:#fde047;">+/ -</span>] | 圖表與DOM皆可滾動與拖曳
                 </div>
             </div>
 
@@ -293,60 +293,70 @@
                     <div class="panel-block-vertical panel-block-divider-vertical">
                         <div style="color: #6ee7b7; font-weight: bold; font-size: 15px; margin-bottom: 15px; letter-spacing: 1px; text-shadow: 0 1px 3px black;">📊 實盤下單 (Personal)</div>
                         
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 14px; font-weight:bold; color:#e2e8f0;">價格:</span> 
-                                <input type="number" id="personal-price" class="input-qty" step="0.1" style="width: 130px;">
+                                <span style="font-size: 13px; font-weight:bold; color:#e2e8f0;">價格:</span> 
+                                <input type="number" id="personal-price" class="input-qty" step="0.1" style="width: 80px;">
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 14px; font-weight:bold; color:#e2e8f0;">數量:</span> 
-                                <input type="number" id="personal-qty" class="input-qty" value="50" style="width: 130px;">
+                                <span style="font-size: 13px; font-weight:bold; color:#e2e8f0;">數量:</span> 
+                                <input type="number" id="personal-qty" class="input-qty" value="50" style="width: 80px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; font-weight:bold; color:#cbd5e1;">止盈:</span> 
+                                <input type="number" id="personal-tp" class="input-qty" step="0.1" placeholder="無" style="width: 80px;" title="下單時將自動套用">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; font-weight:bold; color:#cbd5e1;">止損:</span> 
+                                <input type="number" id="personal-sl" class="input-qty" step="0.1" placeholder="無" style="width: 80px;" title="下單時將自動套用">
                             </div>
                         </div>
                         
                         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <button class="btn btn-buy" style="flex:1;" onclick="placePersonalLimit('BUY')">限價買入</button>
-                            <button class="btn btn-sell" style="flex:1;" onclick="placePersonalLimit('SELL')">限價賣出</button>
+                            <button class="btn btn-buy" style="flex:1;" onclick="placePersonalLimit('BUY', 'OPEN_LONG')">限買(多)</button>
+                            <button class="btn btn-sell" style="flex:1;" onclick="placePersonalLimit('SELL', 'OPEN_SHORT')">限賣(空)</button>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1; background:rgba(34,197,94,0.8);" onclick="handleMarketOrder('BUY', null, true, false, 'tp', 'OPEN_LONG')">市買(多) B</button>
+                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1; background:rgba(239,68,68,0.8);" onclick="handleMarketOrder('SELL', null, true, false, 'tp', 'OPEN_SHORT')">市賣(空) S</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1;" onclick="handleMarketOrder('BUY', null, true, false, 'tp')">市價買 (B)</button>
-                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1;" onclick="handleMarketOrder('SELL', null, true, false, 'tp')">市價賣 (S)</button>
+                            <button class="btn" style="flex:1; background:rgba(2,132,199,0.7); border:1px solid #0284c7; font-size:11px;" onclick="applyTPSL('LONG')" title="為目前的持倉更新止盈/止損">更新多單 TP/SL</button>
+                            <button class="btn" style="flex:1; background:rgba(217,119,6,0.7); border:1px solid #b45309; font-size:11px;" onclick="applyTPSL('SHORT')" title="為目前的持倉更新止盈/止損">更新空單 TP/SL</button>
                         </div>
                     </div>
 
                     <div class="panel-block-vertical panel-block-divider-vertical" style="flex: none;">
                         <div style="color: #fcd34d; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; text-shadow: 0 1px 3px black;">
-                            <span>💼 實盤持倉 (Position)</span>
-                            <button class="btn" style="background:rgba(220,53,69,0.7); border: 1px solid #dc2626; padding: 4px 8px; font-size:12px;" onclick="closeAllPosition()">平倉</button>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 4px; margin-bottom: 10px; border: 1px solid rgba(251,191,36,0.15);">
-                            <div>持倉: <br><span id="pos-size" style="font-weight:bold; color:white; font-size:15px; text-shadow:0 1px 2px black;">0</span></div>
-                            <div>均價: <br><span id="pos-entry" style="font-weight:bold; color:white; font-size:15px; text-shadow:0 1px 2px black;">--</span></div>
-                            <div>現價: <br><span id="pos-current" style="font-weight:bold; color:white; font-size:15px; text-shadow:0 1px 2px black;">--</span></div>
-                            <div>盈虧: <br><span id="pos-pnl" style="font-weight:bold; color:white; font-size: 16px; text-shadow:0 1px 2px black;">--</span></div>
+                            <span>💼 實盤雙向持倉</span>
+                            <button class="btn" style="background:rgba(220,53,69,0.7); border: 1px solid #dc2626; padding: 4px 8px; font-size:12px;" onclick="closeAllPositions()">一鍵全平</button>
                         </div>
                         
-                        <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(10,10,10,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(251,191,36,0.1);">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                    <span style="font-size: 13px; font-weight: bold; color: #cbd5e1;">止盈 (TP):</span>
-                                    <span id="pos-tp-display" style="font-size:14px; color:#38bdf8; font-weight:bold; text-shadow:0 1px 2px black;">未設定</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <input type="number" id="personal-tp-input" class="input-qty" step="0.1" style="flex:1;">
-                                    <button class="btn" style="background:rgba(2,132,199,0.7); border: 1px solid #0284c7; color:white; padding: 4px 8px; flex-shrink: 0;" onclick="setTakeProfit()">設定</button>
-                                </div>
+                        <!-- Long Position Card -->
+                        <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; padding: 8px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span style="color:#4ade80; font-weight:bold; font-size:13px; text-shadow:0 1px 2px black;">🟢 做多 (Long)</span>
+                                <button class="btn" style="background:rgba(16,185,129,0.6); border: 1px solid #10b981; padding: 2px 6px; font-size:11px;" onclick="closePosition('LONG')">市價平多</button>
                             </div>
-                            <div style="width: 100%; height: 1px; background-color: rgba(251,191,36,0.15);"></div>
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                    <span style="font-size: 13px; font-weight: bold; color: #cbd5e1;">止損 (SL):</span>
-                                    <span id="pos-sl-display" style="font-size:14px; color:#fca5a5; font-weight:bold; text-shadow:0 1px 2px black;">未設定</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <input type="number" id="personal-sl-input" class="input-qty" step="0.1" style="flex:1;">
-                                    <button class="btn" style="background:rgba(217,119,6,0.7); border: 1px solid #b45309; color:white; padding: 4px 8px; flex-shrink: 0;" onclick="setStopLoss()">設定</button>
-                                </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; color:#e2e8f0;">
+                                <div>持倉: <span id="pos-long-size" style="font-weight:bold; color:white;">0</span></div>
+                                <div>盈虧: <span id="pos-long-pnl" style="font-weight:bold; color:white;">--</span></div>
+                                <div>均價: <span id="pos-long-entry" style="font-weight:bold; color:white;">--</span></div>
+                                <div>TP/SL: <span id="pos-long-tpsl" style="font-weight:bold; color:#cbd5e1;">-- / --</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Short Position Card -->
+                        <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; padding: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span style="color:#fca5a5; font-weight:bold; font-size:13px; text-shadow:0 1px 2px black;">🔴 做空 (Short)</span>
+                                <button class="btn" style="background:rgba(239,68,68,0.6); border: 1px solid #ef4444; padding: 2px 6px; font-size:11px;" onclick="closePosition('SHORT')">市價平空</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; color:#e2e8f0;">
+                                <div>持倉: <span id="pos-short-size" style="font-weight:bold; color:white;">0</span></div>
+                                <div>盈虧: <span id="pos-short-pnl" style="font-weight:bold; color:white;">--</span></div>
+                                <div>均價: <span id="pos-short-entry" style="font-weight:bold; color:white;">--</span></div>
+                                <div>TP/SL: <span id="pos-short-tpsl" style="font-weight:bold; color:#cbd5e1;">-- / --</span></div>
                             </div>
                         </div>
                     </div>
@@ -387,10 +397,11 @@
     let globalCVD = 0;
     let globalOI = 245000 + Math.floor(Math.random() * 10000);
 
-    let myPosition = 0;
-    let myAvgPrice = 0;
-    let mySL = null;
-    let myTP = null; 
+    // 雙向持倉核心狀態
+    let myPos = {
+        LONG: { size: 0, avgPrice: 0, sl: null, tp: null },
+        SHORT: { size: 0, avgPrice: 0, sl: null, tp: null }
+    };
     let myPersonalLimits = [];
 
     let isAutoFillEnabled = true; 
@@ -427,7 +438,8 @@
 
     function resetMarketData() {
         marketData = []; currentHeatmapTrades = []; currentKLineTrades = []; activeSpoof = null; globalCVD = 0; globalOI = 245000 + Math.floor(Math.random() * 10000);
-        myPosition = 0; myAvgPrice = 0; mySL = null; myTP = null; myPersonalLimits = []; renderPersonalLimits(); updatePositionUI();
+        myPos = { LONG: { size: 0, avgPrice: 0, sl: null, tp: null }, SHORT: { size: 0, avgPrice: 0, sl: null, tp: null } };
+        myPersonalLimits = []; renderPersonalLimits(); updatePositionUI();
         let basePrice = 2982.1;
         for (let i = 0; i < 81; i++) marketData.push({ price: basePrice + ((40 - i) * 0.1), limitBuy: 0, limitSell: 0, personalBuy: 0, personalSell: 0, marketSell: 0, marketBuy: 0, delta: 0, volume: 0 });
         currentPriceIndex = 40; renderAnchorIndex = 40; heatmapHistory = []; ensurePaddingDepth();
@@ -465,25 +477,14 @@
 
     function updateVolume() {
         globalVolume = parseFloat(document.getElementById('volume-slider').value);
-        if (globalVolume > 0 && isMuted) {
-            toggleMute(); 
-        }
+        if (globalVolume > 0 && isMuted) toggleMute(); 
     }
 
     function toggleMute() {
         isMuted = !isMuted;
         const btn = document.getElementById('btn-toggle-mute');
-        if (isMuted) {
-            btn.className = "btn btn-mute-on"; 
-            btn.innerText = "🔇 靜音";
-        } else {
-            btn.className = "btn btn-mute-off"; 
-            btn.innerText = "🔊 音效";
-            if (globalVolume === 0) {
-                globalVolume = 0.5;
-                document.getElementById('volume-slider').value = 0.5;
-            }
-        }
+        if (isMuted) { btn.className = "btn btn-mute-on"; btn.innerText = "🔇 靜音"; } 
+        else { btn.className = "btn btn-mute-off"; btn.innerText = "🔊 音效"; if (globalVolume === 0) { globalVolume = 0.5; document.getElementById('volume-slider').value = 0.5; } }
     }
 
     function ensurePaddingDepth() {
@@ -551,6 +552,41 @@
             ctx.lineWidth = 1; ctx.strokeStyle = t.type === 'BUY' ? 'rgba(74, 222, 128, 0.9)' : 'rgba(248, 113, 113, 0.9)'; ctx.stroke();
             ctx.fillStyle = '#ffffff'; ctx.fillRect(xPos - 1, ty - 1, 2, 2); 
         });
+    }
+
+    function drawPositionLines(ctx, pos, isLong, getYFunc, canvasWidth) {
+        if (pos.size === 0) return;
+        if (pos.avgPrice > 0) {
+            let yAvg = getYFunc(pos.avgPrice);
+            if (yAvg >= 0 && yAvg <= ctx.canvas.height) {
+                ctx.strokeStyle = isLong ? '#10b981' : '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+                ctx.beginPath(); ctx.moveTo(0, yAvg); ctx.lineTo(canvasWidth - 50, yAvg); ctx.stroke(); ctx.setLineDash([]);
+                let textAvg = `${isLong?'多':'空'}均價 ${pos.avgPrice.toFixed(1)} (${pos.size}口)`;
+                ctx.font = 'bold 12px sans-serif'; let tw = ctx.measureText(textAvg).width;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, yAvg - 16, tw + 8, 18);
+                ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textAvg, 12, yAvg - 3);
+            }
+        }
+        if (pos.sl !== null) {
+            let ySL = getYFunc(pos.sl);
+            if (ySL >= 0 && ySL <= ctx.canvas.height) {
+                ctx.strokeStyle = '#eab308'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+                ctx.beginPath(); ctx.moveTo(0, ySL); ctx.lineTo(canvasWidth - 50, ySL); ctx.stroke(); ctx.setLineDash([]);
+                let textSL = `${isLong?'多':'空'}止損 ${pos.sl.toFixed(1)} (${pos.size}口)`; let twSL = ctx.measureText(textSL).width; 
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, ySL - 16, twSL + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textSL, 12, ySL - 3);
+            }
+        }
+        if (pos.tp !== null) {
+            let yTP = getYFunc(pos.tp);
+            if (yTP >= 0 && yTP <= ctx.canvas.height) {
+                ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+                ctx.beginPath(); ctx.moveTo(0, yTP); ctx.lineTo(canvasWidth - 50, yTP); ctx.stroke(); ctx.setLineDash([]);
+                let tpOrder = myPersonalLimits.find(o => o.isTP && (isLong ? o.intent==='CLOSE_LONG' : o.intent==='CLOSE_SHORT'));
+                let tpQty = tpOrder ? tpOrder.qty : pos.size;
+                let textTP = `${isLong?'多':'空'}止盈 ${pos.tp.toFixed(1)} (${tpQty}口)`; let twTP = ctx.measureText(textTP).width; 
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, yTP - 16, twTP + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textTP, 12, yTP - 3);
+            }
+        }
     }
 
     function animateAll() {
@@ -642,27 +678,8 @@
             ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textLimit, 83, yLimit - 3);
         });
 
-        if (myPosition !== 0) {
-            if (myAvgPrice > 0) {
-                let yAvg = getDynamicY(myAvgPrice, klineAreaH, allBars); ctx.strokeStyle = myPosition > 0 ? '#10b981' : '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
-                ctx.beginPath(); ctx.moveTo(0, yAvg); ctx.lineTo(canvas.width - 50, yAvg); ctx.stroke(); ctx.setLineDash([]);
-                let textAvg = `均價 ${myAvgPrice.toFixed(1)} (${Math.abs(myPosition)}口)`; ctx.font = 'bold 12px sans-serif'; let tw = ctx.measureText(textAvg).width;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, yAvg - 16, tw + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textAvg, 12, yAvg - 3);
-            }
-            if (mySL !== null) {
-                let ySL = getDynamicY(mySL, klineAreaH, allBars); ctx.strokeStyle = '#eab308'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
-                ctx.beginPath(); ctx.moveTo(0, ySL); ctx.lineTo(canvas.width - 50, ySL); ctx.stroke(); ctx.setLineDash([]);
-                let textSL = `止損 ${mySL.toFixed(1)} (${Math.abs(myPosition)}口)`; let twSL = ctx.measureText(textSL).width; ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillRect(8, ySL - 16, twSL + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textSL, 12, ySL - 3);
-            }
-            if (myTP !== null) {
-                let yTP = getDynamicY(myTP, klineAreaH, allBars); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
-                ctx.beginPath(); ctx.moveTo(0, yTP); ctx.lineTo(canvas.width - 50, yTP); ctx.stroke(); ctx.setLineDash([]);
-                let tpQty = Math.abs(myPosition); let tpOrder = myPersonalLimits.find(o => o.isTP); if (tpOrder) tpQty = tpOrder.qty;
-                let textTP = `止盈 ${myTP.toFixed(1)} (${tpQty}口)`; let twTP = ctx.measureText(textTP).width; ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillRect(8, yTP - 16, twTP + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textTP, 12, yTP - 3);
-            }
-        }
+        drawPositionLines(ctx, myPos.LONG, true, y => getDynamicY(y, klineAreaH, allBars), canvas.width);
+        drawPositionLines(ctx, myPos.SHORT, false, y => getDynamicY(y, klineAreaH, allBars), canvas.width);
 
         let currentRealPrice = marketData[currentPriceIndex].price;
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, yCurrentSmooth); ctx.lineTo(canvas.width - 50, yCurrentSmooth); ctx.stroke(); ctx.setLineDash([]); 
@@ -712,6 +729,9 @@
             ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textLimit, 83, yLimit - 3);
         });
 
+        drawPositionLines(ctx, myPos.LONG, true, getY, canvas.width);
+        drawPositionLines(ctx, myPos.SHORT, false, getY, canvas.width);
+
         ctx.restore();
 
         ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
@@ -719,23 +739,6 @@
         for (let i = -50; i <= 80; i++) { let y = 35 + (i * ((canvas.height - 65) / 30)) + canvasPanY; if(y > 0 && y < canvas.height && i % 5 === 0) { let p = currentHighestPrice - (i/30)*priceRange; ctx.fillText(p.toFixed(1), canvas.width - 5, y); } }
 
         let yCurrentSmoothFixed = getY(currentKLine.close); let currentRealPrice = marketData[currentPriceIndex].price;
-        
-        if (myPosition !== 0) {
-            if (myAvgPrice > 0) {
-                let yAvg = getY(myAvgPrice); ctx.strokeStyle = myPosition > 0 ? '#10b981' : '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(0, yAvg); ctx.lineTo(canvas.width - 50, yAvg); ctx.stroke(); ctx.setLineDash([]);
-                let textAvg = `均價 ${myAvgPrice.toFixed(1)} (${Math.abs(myPosition)}口)`; ctx.font = 'bold 12px sans-serif'; let tw = ctx.measureText(textAvg).width; ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillRect(8, yAvg - 16, tw + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.fillText(textAvg, 12, yAvg - 3);
-            }
-            if (mySL !== null) {
-                let ySL = getY(mySL); ctx.strokeStyle = '#eab308'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(0, ySL); ctx.lineTo(canvas.width - 50, ySL); ctx.stroke(); ctx.setLineDash([]);
-                let textSL = `止損 ${mySL.toFixed(1)} (${Math.abs(myPosition)}口)`; let twSL = ctx.measureText(textSL).width; ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, ySL - 16, twSL + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.fillText(textSL, 12, ySL - 3);
-            }
-            if (myTP !== null) {
-                let yTP = getY(myTP); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(0, yTP); ctx.lineTo(canvas.width - 50, yTP); ctx.stroke(); ctx.setLineDash([]);
-                let tpQty = Math.abs(myPosition); let tpOrder = myPersonalLimits.find(o => o.isTP); if (tpOrder) tpQty = tpOrder.qty;
-                let textTP = `止盈 ${myTP.toFixed(1)} (${tpQty}口)`; let twTP = ctx.measureText(textTP).width; ctx.fillStyle = 'rgba(0, 0, 0, 0.9)'; ctx.fillRect(8, yTP - 16, twTP + 8, 18); ctx.fillStyle = ctx.strokeStyle; ctx.fillText(textTP, 12, yTP - 3);
-            }
-        }
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, yCurrentSmoothFixed); ctx.lineTo(canvas.width - 50, yCurrentSmoothFixed); ctx.stroke(); ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(canvas.width - 55, yCurrentSmoothFixed); ctx.lineTo(canvas.width - 45, yCurrentSmoothFixed - 11); ctx.lineTo(canvas.width, yCurrentSmoothFixed - 11); ctx.lineTo(canvas.width, yCurrentSmoothFixed + 11); ctx.lineTo(canvas.width - 45, yCurrentSmoothFixed + 11); ctx.closePath(); ctx.fillStyle = '#fbbf24'; ctx.fill();
         ctx.fillStyle = '#000000'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(currentRealPrice.toFixed(1), canvas.width - 23, yCurrentSmoothFixed + 4);
@@ -797,8 +800,8 @@
         if (event.target.tagName === 'INPUT') return;
         let now = performance.now(); if (event.repeat) { if (now - lastKeyTime < 40) { event.preventDefault(); return; } lastKeyTime = now; }
         const key = event.key.toLowerCase();
-        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'tp'); flashButton('btn-buy-panel'); } 
-        else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'tp'); flashButton('btn-sell-panel'); } 
+        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'tp', 'OPEN_LONG'); flashButton('btn-buy-panel'); } 
+        else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'tp', 'OPEN_SHORT'); flashButton('btn-sell-panel'); } 
         else if (key === 'q') { event.preventDefault(); handleMarketOrder('BUY', document.getElementById('maker-qty').value, false); flashButton('btn-maker-buy'); } 
         else if (key === 'w') { event.preventDefault(); handleMarketOrder('SELL', document.getElementById('maker-qty').value, false); flashButton('btn-maker-sell'); } 
         else if (key === '+' || key === '=') { event.preventDefault(); handleManualLimit('ADD'); flashButton('btn-manual-add'); } 
@@ -842,16 +845,16 @@
     function handlePriceClick(e, price, isBidSide, currentQty) {
         if (e.ctrlKey) {
             e.preventDefault();
-            document.getElementById('personal-tp-input').value = price.toFixed(1);
-            let inputEl = document.getElementById('personal-tp-input');
+            document.getElementById('personal-tp').value = price.toFixed(1);
+            let inputEl = document.getElementById('personal-tp');
             inputEl.style.transition = 'none'; inputEl.style.boxShadow = "0 0 15px #38bdf8";
             setTimeout(() => { inputEl.style.transition = 'box-shadow 0.5s'; inputEl.style.boxShadow = "none"; }, 300);
             return;
         }
         if (e.altKey) {
             e.preventDefault();
-            document.getElementById('personal-sl-input').value = price.toFixed(1);
-            let inputEl = document.getElementById('personal-sl-input');
+            document.getElementById('personal-sl').value = price.toFixed(1);
+            let inputEl = document.getElementById('personal-sl');
             inputEl.style.transition = 'none'; inputEl.style.boxShadow = "0 0 15px #fca5a5";
             setTimeout(() => { inputEl.style.transition = 'box-shadow 0.5s'; inputEl.style.boxShadow = "none"; }, 300);
             return;
@@ -888,7 +891,7 @@
         while (price < marketData[marketData.length - 1].price - 0.05) { let newPrice = marketData[marketData.length - 1].price - 0.1; marketData.push({ price: newPrice, limitBuy: isAutoFillEnabled ? getDynamicLimitQty() : 0, limitSell: 0, personalBuy: 0, personalSell: 0, marketSell: 0, marketBuy: 0, delta: 0, volume: 0 }); }
     }
 
-    function placePersonalLimit(side, customPrice=null, customQty=null, isTP=false) {
+    function placePersonalLimit(side, intent, customPrice=null, customQty=null, isTP=false) {
         let price = customPrice !== null ? customPrice : parseFloat(document.getElementById('personal-price').value);
         let qty = customQty !== null ? customQty : parseInt(document.getElementById('personal-qty').value);
         if(isNaN(price) || isNaN(qty) || qty <= 0) return alert('請輸入有效價格與數量！');
@@ -898,7 +901,7 @@
             if(side === 'BUY') marketData[targetIndex].personalBuy += qty;
             else marketData[targetIndex].personalSell += qty;
         }
-        myPersonalLimits.push({ id: Date.now() + Math.random(), side: side, price: price, qty: qty, initialQty: qty, isTP: isTP });
+        myPersonalLimits.push({ id: Date.now() + Math.random(), side: side, intent: intent, price: price, qty: qty, initialQty: qty, isTP: isTP });
         playSound('order_placed');
         renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
     }
@@ -912,12 +915,29 @@
                 if (order.side === 'BUY') marketData[targetIndex].personalBuy = Math.max(0, marketData[targetIndex].personalBuy - order.qty);
                 else marketData[targetIndex].personalSell = Math.max(0, marketData[targetIndex].personalSell - order.qty);
             }
-            if (order.isTP) myTP = null;
+            if (order.isTP) {
+                if (order.intent === 'CLOSE_LONG') myPos.LONG.tp = null;
+                if (order.intent === 'CLOSE_SHORT') myPos.SHORT.tp = null;
+                updatePositionUI();
+            }
             myPersonalLimits.splice(orderIndex, 1);
             if (!isBatch) { 
                 playSound('order_canceled'); 
                 renderPersonalLimits(); renderDOM(); drawKLineCanvas(); drawHeatmapCanvas(); 
             }
+        }
+    }
+
+    /* 🔥 修正：讓被批次撤除（止損時）的幽靈訂單能刷新畫面 */
+    function clearLimitsByIntent(intent, onlyTP = false) {
+        let toCancel = myPersonalLimits.filter(o => o.intent === intent && (!onlyTP || o.isTP));
+        if (toCancel.length > 0) {
+            toCancel.forEach(o => cancelPersonalLimit(o.id, true));
+            // 確保資料刪除後，介面會馬上刷新
+            renderPersonalLimits(); 
+            renderDOM(); 
+            drawKLineCanvas(); 
+            drawHeatmapCanvas();
         }
     }
 
@@ -935,95 +955,163 @@
         myPersonalLimits.forEach(order => {
             const div = document.createElement('div');
             let color = order.side === 'BUY' ? '#4ade80' : '#fca5a5';
-            let label = order.isTP ? '止盈' : (order.side === 'BUY' ? '買入' : '賣出');
+            let label = '';
+            if (order.intent === 'OPEN_LONG') label = '限買(開多)';
+            else if (order.intent === 'OPEN_SHORT') label = '限賣(開空)';
+            else if (order.intent === 'CLOSE_LONG') label = order.isTP ? '多單止盈' : '限賣(平多)';
+            else if (order.intent === 'CLOSE_SHORT') label = order.isTP ? '空單止盈' : '限買(平空)';
+
             div.style = `font-size: 13px; margin-bottom: 5px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 4px; border-left: 3px solid ${color}; color: #e2e8f0; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(251,191,36,0.1);`;
             div.innerHTML = `<span>${label} @ <span style="font-weight:bold; color:${color};">${order.price.toFixed(1)}</span> | 剩餘 ${order.qty}口</span><span style="cursor:pointer; color:#fbbf24; font-size:11px; padding:2px 5px; background:rgba(255,255,255,0.1); border-radius:3px;" onclick="cancelPersonalLimit(${order.id})">撤單</span>`;
             list.appendChild(div);
         });
     }
 
-    function updateMyPosition(type, filledQty, execPrice) {
-        if (type === 'BUY') {
-            if (myPosition < 0) {
-                let coverSize = Math.min(Math.abs(myPosition), filledQty); myPosition += coverSize; let remaining = filledQty - coverSize;
-                if (remaining > 0) { myPosition += remaining; myAvgPrice = execPrice; } else if (myPosition === 0) { myAvgPrice = 0; mySL = null; myTP = null; }
-            } else { let totalVal = (myPosition * myAvgPrice) + (filledQty * execPrice); myPosition += filledQty; myAvgPrice = totalVal / myPosition; }
-        } else {
-            if (myPosition > 0) {
-                let closeSize = Math.min(myPosition, filledQty); myPosition -= closeSize; let remaining = filledQty - closeSize;
-                if (remaining > 0) { myPosition -= remaining; myAvgPrice = execPrice; } else if (myPosition === 0) { myAvgPrice = 0; mySL = null; myTP = null; }
-            } else { let totalVal = (Math.abs(myPosition) * myAvgPrice) + (filledQty * execPrice); myPosition -= filledQty; myAvgPrice = totalVal / Math.abs(myPosition); }
+    function updateMyPosition(filledQty, execPrice, intent) {
+        if (intent === 'OPEN_LONG') {
+            let totalVal = (myPos.LONG.size * myPos.LONG.avgPrice) + (filledQty * execPrice);
+            myPos.LONG.size += filledQty;
+            myPos.LONG.avgPrice = totalVal / myPos.LONG.size;
+        } else if (intent === 'CLOSE_LONG') {
+            myPos.LONG.size = Math.max(0, myPos.LONG.size - filledQty);
+            if (myPos.LONG.size === 0) {
+                myPos.LONG.avgPrice = 0; myPos.LONG.sl = null; myPos.LONG.tp = null;
+                clearLimitsByIntent('CLOSE_LONG');
+            }
+        } else if (intent === 'OPEN_SHORT') {
+            let totalVal = (myPos.SHORT.size * myPos.SHORT.avgPrice) + (filledQty * execPrice);
+            myPos.SHORT.size += filledQty;
+            myPos.SHORT.avgPrice = totalVal / myPos.SHORT.size;
+        } else if (intent === 'CLOSE_SHORT') {
+            myPos.SHORT.size = Math.max(0, myPos.SHORT.size - filledQty);
+            if (myPos.SHORT.size === 0) {
+                myPos.SHORT.avgPrice = 0; myPos.SHORT.sl = null; myPos.SHORT.tp = null;
+                clearLimitsByIntent('CLOSE_SHORT');
+            }
         }
         updatePositionUI();
     }
 
-    function setTakeProfit() {
-        if (myPosition === 0) return alert('目前無持倉，無法設定止盈！');
-        let tp = parseFloat(document.getElementById('personal-tp-input').value); if (isNaN(tp)) return alert('請輸入有效的止盈價！');
+    function applyTPSL(posType, silent = false) {
+        let tpStr = document.getElementById('personal-tp').value;
+        let slStr = document.getElementById('personal-sl').value;
+        let tp = tpStr ? parseFloat(tpStr) : null;
+        let sl = slStr ? parseFloat(slStr) : null;
+
+        let pos = myPos[posType];
+        if (pos.size === 0) {
+            if (!silent) alert(`目前無${posType==='LONG'?'多':'空'}單持倉，無法設定！`);
+            return;
+        }
+
         let currentRealPrice = marketData[currentPriceIndex].price;
-        if (myPosition > 0 && tp <= currentRealPrice) return alert('多單止盈價必須高於現價！'); if (myPosition < 0 && tp >= currentRealPrice) return alert('空單止盈價必須低於現價！');
-        
-        let existingTP = myPersonalLimits.find(o => o.isTP);
-        if (existingTP) cancelPersonalLimit(existingTP.id, true);
-        
-        myTP = tp; 
-        let side = myPosition > 0 ? 'SELL' : 'BUY';
-        placePersonalLimit(side, tp, Math.abs(myPosition), true); 
+
+        if (posType === 'LONG') {
+            if (tp !== null && tp <= currentRealPrice) { if(!silent) alert('多單止盈價必須高於現價！'); tp = null; }
+            if (sl !== null && sl >= currentRealPrice) { if(!silent) alert('多單止損價必須低於現價！'); sl = null; }
+            
+            if (tp !== null || sl !== null || (!tpStr && !slStr)) {
+                if (tp !== null || !tpStr) clearLimitsByIntent('CLOSE_LONG', true); 
+                if (tp !== null) placePersonalLimit('SELL', 'CLOSE_LONG', tp, pos.size, true);
+                if (tp !== null || !tpStr) pos.tp = tp;
+                if (sl !== null || !slStr) pos.sl = sl;
+            }
+        } else {
+            if (tp !== null && tp >= currentRealPrice) { if(!silent) alert('空單止盈價必須低於現價！'); tp = null; }
+            if (sl !== null && sl <= currentRealPrice) { if(!silent) alert('空單止損價必須高於現價！'); sl = null; }
+            
+            if (tp !== null || sl !== null || (!tpStr && !slStr)) {
+                if (tp !== null || !tpStr) clearLimitsByIntent('CLOSE_SHORT', true);
+                if (tp !== null) placePersonalLimit('BUY', 'CLOSE_SHORT', tp, pos.size, true);
+                if (tp !== null || !tpStr) pos.tp = tp;
+                if (sl !== null || !slStr) pos.sl = sl;
+            }
+        }
         updatePositionUI();
+        renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
+        if(!silent && (tp!==null || sl!==null)) alert(`已成功更新${posType==='LONG'?'多':'空'}單止盈止損設定！`);
     }
 
-    function setStopLoss() {
-        if (myPosition === 0) return alert('目前無持倉，無法設定止損！');
-        let sl = parseFloat(document.getElementById('personal-sl-input').value); if (isNaN(sl)) return alert('請輸入有效的止損價！');
-        let currentRealPrice = marketData[currentPriceIndex].price;
-        if (myPosition > 0 && sl >= currentRealPrice) return alert('多單止損價必須低於現價！'); if (myPosition < 0 && sl <= currentRealPrice) return alert('空單止損價必須高於現價！');
-        mySL = sl; updatePositionUI(); renderDOM();
+    function closePosition(type) {
+        if (type === 'LONG' && myPos.LONG.size > 0) {
+            let qty = myPos.LONG.size;
+            clearLimitsByIntent('CLOSE_LONG');
+            handleMarketOrder('SELL', qty, true, true, null, 'CLOSE_LONG');
+        } else if (type === 'SHORT' && myPos.SHORT.size > 0) {
+            let qty = myPos.SHORT.size;
+            clearLimitsByIntent('CLOSE_SHORT');
+            handleMarketOrder('BUY', qty, true, true, null, 'CLOSE_SHORT');
+        }
     }
 
-    function closeAllPosition() { 
-        if (myPosition === 0) return; 
-        let tpOrder = myPersonalLimits.find(o => o.isTP);
-        if (tpOrder) cancelPersonalLimit(tpOrder.id);
-        myTP = null;
-        let qty = Math.abs(myPosition); let side = myPosition > 0 ? 'SELL' : 'BUY'; 
-        handleMarketOrder(side, qty, true, true); 
+    function closeAllPositions() {
+        closePosition('LONG');
+        closePosition('SHORT');
     }
 
     function updatePositionUI() {
-        const posSizeEl = document.getElementById('pos-size'); const posEntryEl = document.getElementById('pos-entry');
-        const posPnLEl = document.getElementById('pos-pnl'); const posCurrentEl = document.getElementById('pos-current');
-        const posSLEl = document.getElementById('pos-sl-display'); const posTPEl = document.getElementById('pos-tp-display');
-        
         if (marketData.length === 0) return;
-        
-        if (myPosition !== 0) {
-            let pnl = myPosition > 0 ? (marketData[currentPriceIndex].price - myAvgPrice) * myPosition : (myAvgPrice - marketData[currentPriceIndex].price) * Math.abs(myPosition);
-            posPnLEl.innerText = pnl > 0 ? `+${pnl.toFixed(1)}` : pnl.toFixed(1); posPnLEl.style.color = pnl > 0 ? '#4ade80' : '#fca5a5';
-        } else { posPnLEl.innerText = '--'; posPnLEl.style.color = 'white'; }
+        let currentRealPrice = marketData[currentPriceIndex].price;
 
-        posSizeEl.innerText = myPosition === 0 ? '0' : (myPosition > 0 ? `+${myPosition} (多)` : `${myPosition} (空)`); posSizeEl.style.color = myPosition > 0 ? '#4ade80' : (myPosition < 0 ? '#fca5a5' : 'white');
-        posEntryEl.innerText = myAvgPrice === 0 ? '--' : myAvgPrice.toFixed(2);
-        
-        if (mySL !== null) { posSLEl.innerText = mySL.toFixed(1); posSLEl.style.color = '#fca5a5'; } else { posSLEl.innerText = '未設定'; posSLEl.style.color = '#94a3b8'; }
-        if (myTP !== null) { posTPEl.innerText = myTP.toFixed(1); posTPEl.style.color = '#38bdf8'; } else { posTPEl.innerText = '未設定'; posTPEl.style.color = '#94a3b8'; }
+        // --- Long UI ---
+        document.getElementById('pos-long-size').innerText = myPos.LONG.size;
+        document.getElementById('pos-long-entry').innerText = myPos.LONG.size > 0 ? myPos.LONG.avgPrice.toFixed(2) : '--';
+        if (myPos.LONG.size > 0) {
+            let pnl = (currentRealPrice - myPos.LONG.avgPrice) * myPos.LONG.size;
+            let pnlEl = document.getElementById('pos-long-pnl');
+            pnlEl.innerText = pnl > 0 ? `+${pnl.toFixed(1)}` : pnl.toFixed(1);
+            pnlEl.style.color = pnl > 0 ? '#4ade80' : '#fca5a5';
+        } else {
+            document.getElementById('pos-long-pnl').innerText = '--';
+            document.getElementById('pos-long-pnl').style.color = 'white';
+        }
+        let lTp = myPos.LONG.tp !== null ? myPos.LONG.tp.toFixed(1) : '--';
+        let lSl = myPos.LONG.sl !== null ? myPos.LONG.sl.toFixed(1) : '--';
+        document.getElementById('pos-long-tpsl').innerText = `${lTp} / ${lSl}`;
+
+        // --- Short UI ---
+        document.getElementById('pos-short-size').innerText = myPos.SHORT.size;
+        document.getElementById('pos-short-entry').innerText = myPos.SHORT.size > 0 ? myPos.SHORT.avgPrice.toFixed(2) : '--';
+        if (myPos.SHORT.size > 0) {
+            let pnl = (myPos.SHORT.avgPrice - currentRealPrice) * myPos.SHORT.size;
+            let pnlEl = document.getElementById('pos-short-pnl');
+            pnlEl.innerText = pnl > 0 ? `+${pnl.toFixed(1)}` : pnl.toFixed(1);
+            pnlEl.style.color = pnl > 0 ? '#4ade80' : '#fca5a5';
+        } else {
+            document.getElementById('pos-short-pnl').innerText = '--';
+            document.getElementById('pos-short-pnl').style.color = 'white';
+        }
+        let sTp = myPos.SHORT.tp !== null ? myPos.SHORT.tp.toFixed(1) : '--';
+        let sSl = myPos.SHORT.sl !== null ? myPos.SHORT.sl.toFixed(1) : '--';
+        document.getElementById('pos-short-tpsl').innerText = `${sTp} / ${sSl}`;
     }
 
     function checkStopLoss() {
-        if (myPosition === 0 || mySL === null) return;
-        let currentRealPrice = marketData[currentPriceIndex].price; let triggered = false; let closeType = ''; let closeQty = Math.abs(myPosition);
-        let audioType = '';
-        if (myPosition > 0 && currentRealPrice <= mySL) { triggered = true; closeType = 'SELL'; audioType = 'buy_sl'; } 
-        else if (myPosition < 0 && currentRealPrice >= mySL) { triggered = true; closeType = 'BUY'; audioType = 'sell_sl'; }
-        
+        let currentRealPrice = marketData[currentPriceIndex].price;
+        let triggered = false;
+
+        // Long SL check
+        if (myPos.LONG.size > 0 && myPos.LONG.sl !== null && currentRealPrice <= myPos.LONG.sl) {
+            triggered = true;
+            let closeQty = myPos.LONG.size;
+            myPos.LONG.sl = null;
+            clearLimitsByIntent('CLOSE_LONG');
+            setTimeout(() => { handleMarketOrder('SELL', closeQty, true, true, 'buy_sl', 'CLOSE_LONG'); }, 10);
+        }
+
+        // Short SL check
+        if (myPos.SHORT.size > 0 && myPos.SHORT.sl !== null && currentRealPrice >= myPos.SHORT.sl) {
+            triggered = true;
+            let closeQty = myPos.SHORT.size;
+            myPos.SHORT.sl = null;
+            clearLimitsByIntent('CLOSE_SHORT');
+            setTimeout(() => { handleMarketOrder('BUY', closeQty, true, true, 'sell_sl', 'CLOSE_SHORT'); }, 10);
+        }
+
         if (triggered) {
-            mySL = null; 
-            let tpOrder = myPersonalLimits.find(o => o.isTP);
-            if (tpOrder) cancelPersonalLimit(tpOrder.id);
-            myTP = null;
             updatePositionUI(); 
             const terminal = document.getElementById('personal-trading-panel'); terminal.style.transition = 'none'; terminal.style.boxShadow = "0 0 30px #ef4444";
             setTimeout(() => { terminal.style.transition = 'box-shadow 0.5s'; terminal.style.boxShadow = "0 8px 20px rgba(0,0,0,0.7)"; }, 200);
-            setTimeout(() => { handleMarketOrder(closeType, closeQty, true, true, audioType); }, 10);
         }
     }
 
@@ -1056,13 +1144,23 @@
             let limitMatch = myPersonalLimits.find(o => Math.abs(row.price - o.price) < 0.051);
             if (limitMatch) {
                 let color = limitMatch.side === 'BUY' ? '#4ade80' : '#fca5a5';
-                let txt = limitMatch.isTP ? '盈' : '限';
+                let txt = limitMatch.isTP ? '盈' : (limitMatch.side==='BUY'?'多限':'空限');
                 posIndicator += `<span style="background:${color}; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">${txt}</span>`;
             }
-            if (myPosition !== 0 && Math.abs(row.price - myAvgPrice) < 0.051) {
-                let color = myPosition > 0 ? '#10b981' : '#ef4444'; posIndicator += `<span style="background:${color}; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">均</span>`; tr.style.boxShadow = `inset 0 0 10px rgba(${myPosition > 0 ? '16,185,129':'239,68,68'}, 0.4)`;
+            if (myPos.LONG.size > 0 && Math.abs(row.price - myPos.LONG.avgPrice) < 0.051) {
+                posIndicator += `<span style="background:#10b981; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">多均</span>`;
+                tr.style.boxShadow = `inset 0 0 10px rgba(16,185,129, 0.4)`;
             }
-            if (myPosition !== 0 && mySL !== null && Math.abs(row.price - mySL) < 0.051) { posIndicator += `<span style="background:#eab308; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">損</span>`; }
+            if (myPos.SHORT.size > 0 && Math.abs(row.price - myPos.SHORT.avgPrice) < 0.051) {
+                posIndicator += `<span style="background:#ef4444; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">空均</span>`;
+                tr.style.boxShadow = `inset 0 0 10px rgba(239,68,68, 0.4)`;
+            }
+            if (myPos.LONG.sl !== null && Math.abs(row.price - myPos.LONG.sl) < 0.051) {
+                posIndicator += `<span style="background:#eab308; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">多損</span>`;
+            }
+            if (myPos.SHORT.sl !== null && Math.abs(row.price - myPos.SHORT.sl) < 0.051) {
+                posIndicator += `<span style="background:#eab308; color:black; font-size:10px; line-height:14px; padding:0px 3px; border-radius:2px; font-weight:900; box-shadow:0 1px 2px black; display:flex; align-items:center; justify-content:center;">空損</span>`;
+            }
             
             priceDisplay = `
                 <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
@@ -1084,7 +1182,6 @@
             tbody.appendChild(tr);
         }
         
-        document.getElementById('pos-current').innerText = marketData[currentPriceIndex].price.toFixed(1);
         updatePositionUI(); 
     }
 
@@ -1101,7 +1198,7 @@
         }
     }
 
-    function handleMarketOrder(type, customQty = null, isPersonal = false, isClosing = false, soundOverride = null) {
+    function handleMarketOrder(type, customQty = null, isPersonal = false, isClosing = false, soundOverride = null, intent = null) {
         let qty = customQty !== null ? parseInt(customQty) : (document.getElementById('personal-qty') ? parseInt(document.getElementById('personal-qty').value) : 50);
         if (isNaN(qty) || qty <= 0) return; 
         
@@ -1115,8 +1212,7 @@
                 let bestAskIndex = -1;
                 for (let i = currentPriceIndex - 1; i >= 0; i--) {
                     if ((marketData[i].limitSell || 0) + (marketData[i].personalSell || 0) > 0) {
-                        bestAskIndex = i;
-                        break;
+                        bestAskIndex = i; break;
                     }
                 }
                 if (bestAskIndex === -1) {
@@ -1148,10 +1244,15 @@
                         let orderFill = Math.min(remainingPersonalFilled, myOrder.qty);
                         myOrder.qty -= orderFill;
                         remainingPersonalFilled -= orderFill;
-                        updateMyPosition('SELL', orderFill, myOrder.price);
+                        
+                        updateMyPosition(orderFill, myOrder.price, myOrder.intent);
                         
                         if (myOrder.qty === 0) {
-                            if (myOrder.isTP) myTP = null;
+                            if (myOrder.isTP) {
+                                if (myOrder.intent === 'CLOSE_LONG') myPos.LONG.tp = null;
+                                if (myOrder.intent === 'CLOSE_SHORT') myPos.SHORT.tp = null;
+                                updatePositionUI();
+                            }
                             playSound('tp'); 
                         }
                     }
@@ -1176,8 +1277,7 @@
                 let bestBidIndex = -1;
                 for (let i = currentPriceIndex + 1; i < marketData.length; i++) {
                     if ((marketData[i].limitBuy || 0) + (marketData[i].personalBuy || 0) > 0) {
-                        bestBidIndex = i;
-                        break;
+                        bestBidIndex = i; break;
                     }
                 }
                 if (bestBidIndex === -1) {
@@ -1208,10 +1308,15 @@
                         let orderFill = Math.min(remainingPersonalFilled, myOrder.qty);
                         myOrder.qty -= orderFill;
                         remainingPersonalFilled -= orderFill;
-                        updateMyPosition('BUY', orderFill, myOrder.price);
+                        
+                        updateMyPosition(orderFill, myOrder.price, myOrder.intent);
                         
                         if (myOrder.qty === 0) {
-                            if (myOrder.isTP) myTP = null;
+                            if (myOrder.isTP) {
+                                if (myOrder.intent === 'CLOSE_LONG') myPos.LONG.tp = null;
+                                if (myOrder.intent === 'CLOSE_SHORT') myPos.SHORT.tp = null;
+                                updatePositionUI();
+                            }
                             playSound('tp'); 
                         }
                     }
@@ -1247,7 +1352,16 @@
         let minBigTradeSize = parseInt(document.getElementById('big-trade-filter').value) || 1;
         if (totalFilled >= minBigTradeSize) { let vwap = totalCost / totalFilled; let tradeObj = { price: vwap, volume: totalFilled, type: type }; currentHeatmapTrades.push(tradeObj); currentKLineTrades.push(tradeObj); }
 
-        if (isPersonal && totalFilled > 0) { let execAvg = totalCost / totalFilled; updateMyPosition(type, totalFilled, execAvg); }
+        if (isPersonal && intent && totalFilled > 0) { 
+            let execAvg = totalCost / totalFilled; 
+            updateMyPosition(totalFilled, execAvg, intent); 
+            
+            // 下單時若有填寫 TP/SL 自動為新持倉套用
+            let tpStr = document.getElementById('personal-tp') ? document.getElementById('personal-tp').value : '';
+            let slStr = document.getElementById('personal-sl') ? document.getElementById('personal-sl').value : '';
+            if (intent === 'OPEN_LONG' && (tpStr || slStr)) setTimeout(() => { applyTPSL('LONG', true); }, 100);
+            if (intent === 'OPEN_SHORT' && (tpStr || slStr)) setTimeout(() => { applyTPSL('SHORT', true); }, 100);
+        }
         ensurePaddingDepth(); let newPrice = marketData[currentPriceIndex].price;
         targetKLine.close = newPrice; if (newPrice > targetKLine.high) targetKLine.high = newPrice; if (newPrice < targetKLine.low) targetKLine.low = newPrice;   
 
