@@ -317,8 +317,8 @@
                             <button class="btn btn-sell" style="flex:1;" onclick="placePersonalLimit('SELL', 'OPEN_SHORT')">限賣(空)</button>
                         </div>
                         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1; background:rgba(34,197,94,0.8);" onclick="handleMarketOrder('BUY', null, true, false, 'tp', 'OPEN_LONG')">市買(多) B</button>
-                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1; background:rgba(239,68,68,0.8);" onclick="handleMarketOrder('SELL', null, true, false, 'tp', 'OPEN_SHORT')">市賣(空) S</button>
+                            <button id="btn-buy-panel" class="btn btn-buy" style="flex:1; background:rgba(34,197,94,0.8);" onclick="handleMarketOrder('BUY', null, true, false, 'personal_market', 'OPEN_LONG')">市買(多) B</button>
+                            <button id="btn-sell-panel" class="btn btn-sell" style="flex:1; background:rgba(239,68,68,0.8);" onclick="handleMarketOrder('SELL', null, true, false, 'personal_market', 'OPEN_SHORT')">市賣(空) S</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button class="btn" style="flex:1; background:rgba(2,132,199,0.7); border:1px solid #0284c7; font-size:11px;" onclick="applyTPSL('LONG')" title="為目前的持倉更新止盈/止損">更新多單 TP/SL</button>
@@ -456,7 +456,9 @@
         sell_sl: 'sell_sl.mp3',    
         order_placed: 'female_order placed.wav',
         order_canceled: 'female_order canceled.wav',
-        tp: 'tp.mp3'  
+        limit_filled: 'tp.mp3',
+        tp_filled: 'female_order filled.wav',
+        personal_market: 'tp.mp3'  
     };
 
     function initAudio() {
@@ -800,8 +802,8 @@
         if (event.target.tagName === 'INPUT') return;
         let now = performance.now(); if (event.repeat) { if (now - lastKeyTime < 40) { event.preventDefault(); return; } lastKeyTime = now; }
         const key = event.key.toLowerCase();
-        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'tp', 'OPEN_LONG'); flashButton('btn-buy-panel'); } 
-        else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'tp', 'OPEN_SHORT'); flashButton('btn-sell-panel'); } 
+        if (key === 'b') { event.preventDefault(); handleMarketOrder('BUY', null, true, false, 'personal_market', 'OPEN_LONG'); flashButton('btn-buy-panel'); } 
+        else if (key === 's') { event.preventDefault(); handleMarketOrder('SELL', null, true, false, 'personal_market', 'OPEN_SHORT'); flashButton('btn-sell-panel'); } 
         else if (key === 'q') { event.preventDefault(); handleMarketOrder('BUY', document.getElementById('maker-qty').value, false); flashButton('btn-maker-buy'); } 
         else if (key === 'w') { event.preventDefault(); handleMarketOrder('SELL', document.getElementById('maker-qty').value, false); flashButton('btn-maker-sell'); } 
         else if (key === '+' || key === '=') { event.preventDefault(); handleManualLimit('ADD'); flashButton('btn-manual-add'); } 
@@ -928,12 +930,10 @@
         }
     }
 
-    /* 🔥 修正：讓被批次撤除（止損時）的幽靈訂單能刷新畫面 */
     function clearLimitsByIntent(intent, onlyTP = false) {
         let toCancel = myPersonalLimits.filter(o => o.intent === intent && (!onlyTP || o.isTP));
         if (toCancel.length > 0) {
             toCancel.forEach(o => cancelPersonalLimit(o.id, true));
-            // 確保資料刪除後，介面會馬上刷新
             renderPersonalLimits(); 
             renderDOM(); 
             drawKLineCanvas(); 
@@ -1029,7 +1029,7 @@
         }
         updatePositionUI();
         renderDOM(); drawKLineCanvas(); drawHeatmapCanvas();
-        if(!silent && (tp!==null || sl!==null)) alert(`已成功更新${posType==='LONG'?'多':'空'}單止盈止損設定！`);
+        // 移除原有的成功設定確認彈窗
     }
 
     function closePosition(type) {
@@ -1252,8 +1252,10 @@
                                 if (myOrder.intent === 'CLOSE_LONG') myPos.LONG.tp = null;
                                 if (myOrder.intent === 'CLOSE_SHORT') myPos.SHORT.tp = null;
                                 updatePositionUI();
+                                playSound('tp_filled'); 
+                            } else {
+                                playSound('limit_filled'); 
                             }
-                            playSound('tp'); 
                         }
                     }
                     myPersonalLimits = myPersonalLimits.filter(o => o.qty > 0);
@@ -1316,8 +1318,10 @@
                                 if (myOrder.intent === 'CLOSE_LONG') myPos.LONG.tp = null;
                                 if (myOrder.intent === 'CLOSE_SHORT') myPos.SHORT.tp = null;
                                 updatePositionUI();
+                                playSound('tp_filled'); 
+                            } else {
+                                playSound('limit_filled'); 
                             }
-                            playSound('tp'); 
                         }
                     }
                     myPersonalLimits = myPersonalLimits.filter(o => o.qty > 0);
